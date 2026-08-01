@@ -16,7 +16,8 @@ godot --path .                          # apri e premi F5
 
 | Se vuoi… | Apri |
 |---|---|
-| **Far girare il progetto** | [`docs/SETUP_EXPORT.md`](docs/SETUP_EXPORT.md) |
+| **Far girare il progetto** (Windows + Android) | [`docs/SETUP_EXPORT.md`](docs/SETUP_EXPORT.md) |
+| **Orientarti in Godot** venendo da altri linguaggi | [`docs/GODOT_PER_PROGRAMMATORI.md`](docs/GODOT_PER_PROGRAMMATORI.md) |
 | Sapere cosa costruire dopo | [`docs/TDD_02_Roadmap_MVP.md`](docs/TDD_02_Roadmap_MVP.md) → Sprint 1 |
 | Capire come è fatto il software | [`docs/TDD_00_Architettura.md`](docs/TDD_00_Architettura.md) |
 | Capire perché i numeri sono quelli | [`docs/TDD_01_Economia_Bilanciamento.md`](docs/TDD_01_Economia_Bilanciamento.md) |

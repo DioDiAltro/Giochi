@@ -1,133 +1,205 @@
-# Setup e Esportazione — Sprint 0
+# Setup e Esportazione
 
-Cosa serve per avere il progetto sul tuo telefono entro il giorno 2 dello Sprint 0.
+Guida operativa per **Windows + Android**, che è il percorso più rapido per avere il prototipo su un telefono. iOS in appendice (§7).
 
-> **Onestà preliminare:** la parte di firma (keystore Android, certificati Apple) richiede le **tue** credenziali e non può essere preconfigurata nel repo. Qui trovi la sequenza esatta di comandi e impostazioni; i segreti li metti tu, e `export_presets.cfg` è nel `.gitignore` apposta perché contiene la password del keystore.
+> La parte di firma richiede le **tue** credenziali e non può stare nel repo. `export_presets.cfg` è nel `.gitignore` apposta: contiene la password del keystore.
 
 ---
 
-## 1. Aprire il progetto
+## 1. Godot
 
-Scarica **Godot 4.4.x standard** (non .NET, non serve C#) da [godotengine.org](https://godotengine.org/download).
+Scarica **Godot 4.4.x** da [godotengine.org/download/windows](https://godotengine.org/download/windows/) — versione **standard**, *non* .NET (quella serve per C#).
 
-La radice del progetto Godot **coincide con la radice del repo**: apri direttamente `Giochi/project.godot`. Non c'è una sottocartella separata — così `res://data/` è esattamente la cartella `data/` versionata, e non esistono due copie dei numeri di bilanciamento da tenere allineate.
+Non c'è installer: è un singolo `.exe` dentro uno zip. Scompatta dove vuoi (es. `C:\Godot\`) e fai doppio clic.
 
-Al primo avvio Godot crea `.godot/` (già in `.gitignore`).
+> **Consiglio:** tieni l'eseguibile in una cartella stabile e crea un collegamento. Ti servirà anche da riga di comando per `check_all.sh`.
 
-**Verifica immediata:** premi F5. Devi vedere la griglia e, in alto, il pannello diagnostico con `16/16 — i dati coincidono con balance_sim.py`. In console:
+## 2. Aprire il progetto
+
+La radice del repo **è** la radice del progetto Godot. Nel gestore progetti: **Importa** → seleziona `project.godot` → **Importa e modifica**.
+
+Premi **F5**. Devi vedere la griglia, e nel pannello in alto `16/16 — i dati coincidono con balance_sim.py`. In console:
 
 ```
 tier(ingot_iron) = 3, vi = 15.625
 ```
 
----
+Se leggi quella riga, le fondamenta reggono.
 
-## 2. Verifica da riga di comando
+## 3. ⚠️ Il filtro di esportazione — leggilo prima di esportare
 
-Prima di ogni commit:
+**Godot non importa i file `.json` come risorse.** Sono "file non-risorsa": per finire nel pacchetto esportato devono essere elencati in un filtro. Se lo dimentichi, la build sul telefono parte **senza nessun dato di bilanciamento** — niente materiali, niente ricette, niente edifici — e su un telefono non hai una console per capire perché.
 
-```bash
-export GODOT=/percorso/al/binario/godot        # una volta per sessione
-./tools/check_all.sh
-```
-
-Esegue le 17 invarianti di design, valida i JSON e lancia il self test dell'engine (dati + tick loop). Esce con codice 1 se qualcosa si rompe: piazzalo in un hook di pre-commit e non potrai più rompere il bilanciamento senza accorgertene.
-
-Solo l'engine:
-
-```bash
-godot --headless --path . -- --selftest
-```
-
----
-
-## 3. ⚠️ Il filtro di esportazione — leggi questo prima di esportare
-
-**Godot non importa i file `.json` come risorse.** Sono "file non-risorsa", e per finire dentro il pacchetto esportato devono essere elencati esplicitamente in un filtro. Se lo dimentichi, la build sul telefono parte **senza nessun dato di bilanciamento**: nessun materiale, nessuna ricetta, nessun edificio.
-
-In **Progetto → Esporta → (preset) → Risorse**, nel campo **"Filtri per esportare file non-risorsa"** metti:
+In **Progetto → Esporta → (preset Android) → Risorse**, campo **"Filtri per esportare file non-risorsa"**:
 
 ```
 data/*.json
 ```
 
-Il progetto ha una rete di sicurezza: se i dati non si caricano, il pannello diagnostico mostra un banner rosso a tutto schermo con questa istruzione. Su un telefono non hai una console, quindi l'errore deve gridare — ma è molto meglio non causarlo.
+Il progetto ha una rete di sicurezza: se i dati non si caricano, il pannello diagnostico mostra un banner rosso a tutto schermo con questa istruzione. Ma è molto meglio non arrivarci.
 
 ---
 
-## 4. Android
+## 4. Android su Windows — setup una tantum
 
-### Una tantum
+### 4.1 JDK 17
 
-1. Installa **Android Studio** (serve solo per l'SDK) e un **JDK 17**.
-2. In Android Studio → SDK Manager, installa gli SDK Platform-Tools e almeno una piattaforma recente.
-3. In Godot: **Editor → Impostazioni Editor → Esporta → Android**, imposta il percorso dell'**Android SDK** e del **Java SDK**.
-4. Crea il keystore di debug:
+Godot 4.4 richiede **esattamente il JDK 17** per l'export Android (né 11 né 21).
 
-```bash
-keytool -keyalg RSA -genkeypair -alias androiddebugkey \
-  -keypass android -keystore debug.keystore -storepass android \
-  -dname "CN=Android Debug,O=Android,C=US" -validity 9999 \
+```powershell
+winget install Microsoft.OpenJDK.17
+```
+
+Verifica (riapri il terminale dopo l'installazione):
+
+```powershell
+java -version      # deve dire 17.x
+keytool -help      # deve rispondere: serve al passo 4.3
+```
+
+### 4.2 Android SDK
+
+Il modo meno doloroso è installare **Android Studio**, che si porta dietro l'SDK:
+
+```powershell
+winget install Google.AndroidStudio
+```
+
+Al primo avvio completa il wizard (accetta le licenze). Poi **More Actions → SDK Manager** e annota il percorso in alto, tipicamente:
+
+```
+C:\Users\<tuonome>\AppData\Local\Android\Sdk
+```
+
+Nella scheda **SDK Tools** assicurati che siano spuntati **Android SDK Build-Tools**, **Android SDK Platform-Tools** e **Android SDK Command-line Tools**.
+
+> Android Studio serve solo per l'SDK. Non lo aprirai più: scriverai tutto in Godot.
+
+### 4.3 Keystore di debug
+
+Serve a firmare le build di test. Crealo una volta e riusalo sempre:
+
+```powershell
+cd $env:USERPROFILE\.android
+keytool -keyalg RSA -genkeypair -alias androiddebugkey `
+  -keypass android -keystore debug.keystore -storepass android `
+  -dname "CN=Android Debug,O=Android,C=US" -validity 9999 `
   -deststoretype pkcs12
 ```
 
-   Poi in **Impostazioni Editor → Esporta → Android → Debug Keystore** indica il file appena creato (utente `androiddebugkey`, password `android`).
+Se la cartella `.android` non esiste, creala con `mkdir $env:USERPROFILE\.android`.
 
-5. **Editor → Gestisci modelli di esportazione** → scarica i template della tua versione esatta di Godot.
+### 4.4 Dire a Godot dove sono le cose
 
-### Preset
+**Editor → Impostazioni Editor → Esporta → Android**:
 
-**Progetto → Esporta → Aggiungi → Android**, poi:
+| Campo | Valore |
+|---|---|
+| Android SDK Path | `C:\Users\<tuonome>\AppData\Local\Android\Sdk` |
+| Java SDK Path | `C:\Program Files\Microsoft\jdk-17.x.x-hotspot` |
+| Debug Keystore | `C:\Users\<tuonome>\.android\debug.keystore` |
+| Debug Keystore User | `androiddebugkey` |
+| Debug Keystore Pass | `android` |
+
+### 4.5 Template di esportazione
+
+**Editor → Gestisci modelli di esportazione → Scarica ed installa**. Circa 1 GB, una volta sola per ogni versione di Godot. Devono corrispondere **esattamente** alla tua versione (4.4.1 con 4.4.1).
+
+### 4.6 Il preset
+
+**Progetto → Esporta → Aggiungi → Android**:
 
 | Impostazione | Valore | Perché |
 |---|---|---|
-| Filtri file non-risorsa | `data/*.json` | **obbligatorio**, vedi §3 |
-| Texture Format → ETC2 ASTC | attivo | già impostato in `project.godot` |
-| Architetture | `arm64-v8a` | l'unica richiesta dal Play Store dal 2019 |
+| Filtri file non-risorsa | `data/*.json` | **obbligatorio**, §3 |
+| Architetture → `arm64-v8a` | attivo | l'unica che il Play Store accetta |
+| Architetture → altre | disattive | dimezzano il peso dell'APK |
 
-Le altre voci lasciale ai default di Godot 4.4 salvo motivi specifici.
-
-### Installare sul device
-
-Abilita **Opzioni sviluppatore → Debug USB** sul telefono, collegalo e usa il pulsante **"Esegui su dispositivo remoto"** (icona a forma di telefono in alto a destra nell'editor): compila, installa e avvia in un colpo solo. È il modo più rapido per iterare.
-
-In alternativa: `Esporta progetto` → `.apk` → `adb install -r build.apk`.
+Il resto lascialo ai default di Godot 4.4.
 
 ---
 
-## 5. iOS
+## 5. Mettere l'app sul telefono
 
-**Serve un Mac con Xcode.** Non ci sono alternative supportate.
+### Sul telefono, una volta sola
 
-1. **Editor → Gestisci modelli di esportazione** → template della tua versione.
-2. **Progetto → Esporta → Aggiungi → iOS**. Compila `Bundle Identifier` (es. `com.tuonome.factorydefense`), `Team ID` e il profilo di provisioning.
-3. Filtri file non-risorsa: `data/*.json` (§3).
-4. L'esportazione produce un **progetto Xcode**, non un `.ipa`. Aprilo, seleziona il tuo team in *Signing & Capabilities*, e premi Run col telefono collegato.
+**Impostazioni → Info sul telefono → Numero build**, toccalo **7 volte**. Poi **Impostazioni → Opzioni sviluppatore → Debug USB: attivo**.
 
-Un **Apple ID gratuito** basta per installare sul tuo dispositivo (l'app scade dopo 7 giorni). Per TestFlight serve l'**Apple Developer Program** (99 $/anno).
+### Collega e verifica
 
-### Orientamento e safe area
+Collega via USB (con un cavo dati — non tutti i cavi lo sono). Sul telefono comparirà "Consentire il debug USB?": accetta e spunta "Consenti sempre".
 
-`project.godot` imposta già l'orientamento verticale e il progetto legge `DisplayServer.get_display_safe_area()`. Sul primo iPhone col notch che provi, **verifica che il pannello diagnostico non finisca sotto la barra di stato**: se succede, il bug è nella conversione fra pixel schermo e pixel viewport in `ui/debug_hud.gd`, non nel valore della safe area.
+```powershell
+cd "C:\Users\<tuonome>\AppData\Local\Android\Sdk\platform-tools"
+.\adb devices
+```
 
----
+Devi vedere il seriale del telefono seguito da `device`. Se dice `unauthorized`, guarda il popup sul telefono. Se non compare niente, prova un altro cavo — è la causa più frequente.
 
-## 6. `export_presets.cfg`
+### Deploy in un clic
 
-È in `.gitignore` perché contiene percorsi locali e la password del keystore. Non committarlo mai.
-
-Quando avrai un preset funzionante, salva una copia ripulita dai segreti come `export_presets.cfg.template` e committa quella: al prossimo ambiente ti risparmi mezza giornata.
+In Godot, in alto a destra compare un'**icona a forma di telefono**. Cliccala: compila, installa e avvia sul dispositivo. È il modo giusto di iterare — non esportare l'APK a mano ogni volta.
 
 ---
 
-## 7. Checklist Sprint 0
+## 6. Verifica da riga di comando
 
-- [ ] Il progetto si apre e F5 mostra la griglia
-- [ ] Il pannello diagnostico dice **16/16**
-- [ ] `./tools/check_all.sh` esce verde
-- [ ] Filtro `data/*.json` impostato nel preset di esportazione
-- [ ] **Una build gira sul tuo telefono fisico** — entro il giorno 2, non alla fine
-- [ ] Pan a un dito e pinch-zoom funzionano e sono piacevoli
+Prima di ogni commit:
+
+```powershell
+$env:GODOT = "C:\Godot\Godot_v4.4.1-stable_win64.exe"
+bash tools/check_all.sh          # con Git Bash o WSL
+```
+
+Oppure solo l'engine, senza bash:
+
+```powershell
+& $env:GODOT --headless --path . -- --selftest
+```
+
+Esegue le 17 invarianti di design, valida i JSON e verifica che l'engine calcoli gli stessi numeri del simulatore Python. Exit code 1 se qualcosa si rompe: perfetto per un hook di pre-commit.
+
+---
+
+## 7. Appendice: iOS
+
+**Serve un Mac con Xcode.** Non ci sono alternative supportate — nemmeno macchine virtuali, che violano i termini Apple.
+
+Quando avrai accesso a un Mac:
+
+1. Template di esportazione per la tua versione di Godot.
+2. **Progetto → Esporta → Aggiungi → iOS**: `Bundle Identifier` (es. `com.tuonome.factorydefense`), `Team ID`, profilo di provisioning.
+3. Filtro `data/*.json` (§3).
+4. L'export produce un **progetto Xcode**, non un `.ipa`. Aprilo, imposta il team in *Signing & Capabilities*, premi Run col telefono collegato.
+
+Un **Apple ID gratuito** basta per installare sul tuo dispositivo (l'app scade dopo 7 giorni). Per TestFlight serve l'**Apple Developer Program**, 99 $/anno.
+
+Non è bloccante: puoi sviluppare tutto l'MVP su Android e affrontare iOS quando avrai qualcosa da mostrare.
+
+### Safe area
+
+`project.godot` imposta già l'orientamento verticale, e il codice legge `DisplayServer.get_display_safe_area()`. Sul primo iPhone col notch, verifica che il pannello diagnostico non finisca sotto la barra di stato: se succede, il bug è nella conversione fra pixel schermo e pixel viewport in `ui/debug_hud.gd`, non nel valore della safe area.
+
+---
+
+## 8. `export_presets.cfg`
+
+È nel `.gitignore` perché contiene percorsi locali e la password del keystore. **Non committarlo mai.**
+
+Quando avrai un preset funzionante, salvane una copia ripulita dai segreti come `export_presets.cfg.template` e committa quella.
+
+---
+
+## 9. Checklist Sprint 0
+
+- [ ] Godot 4.4 scaricato, progetto importato
+- [ ] F5 mostra la griglia e il pannello dice **16/16**
+- [ ] JDK 17 + Android SDK installati, percorsi impostati in Godot
+- [ ] Keystore di debug creato
+- [ ] Filtro `data/*.json` nel preset di esportazione
+- [ ] `adb devices` vede il telefono
+- [ ] **Una build gira sul tuo telefono** — entro il giorno 2, non alla fine
+- [ ] Pan e pinch-zoom funzionano e sono piacevoli al tatto
 - [ ] Il pannello rispetta la safe area
 
-L'unica voce che non puoi rimandare è la build su device fisico. Rimandarla allo Sprint 6 significa scoprire i problemi di touch, di safe area e di firma quando costano dieci volte tanto.
+L'unica voce che non puoi rimandare è la build su device fisico. Rimandarla allo Sprint 6 significa scoprire i problemi di touch, safe area e firma quando costano dieci volte tanto.
