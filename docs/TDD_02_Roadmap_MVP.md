@@ -17,22 +17,36 @@ Grafica, effetti, audio, menu: tutto dopo. Un prototipo brutto che dimostra il l
 
 ---
 
-## Sprint 0 — Fondamenta (3-4 giorni)
+## Sprint 0 — Fondamenta ✅ CODICE SCRITTO E VERIFICATO
 
 **Obiettivo:** un progetto Godot che si avvia su un telefono vero e legge i dati di bilanciamento.
 
-- [ ] Progetto Godot 4.x, renderer **Mobile**, risoluzione base 1080×1920, stretch `canvas_items` / `expand`
-- [ ] Export template iOS + Android configurati e **una build installata su un device fisico** entro il giorno 2
-- [ ] Rispetto della safe area (`DisplayServer.get_display_safe_area()`) — ora, non dopo
-- [ ] Autoload `Database.gd`: carica `res://data/*.json`, espone `vi(mat)`, `tier(mat)`, `recipe(id)`, `building(id)`
-- [ ] Autoload `SimCore.gd`: il tick loop a 20 Hz che gira a vuoto
-- [ ] Autoload `EventBus.gd`
-- [ ] `WorldState` con `terrain`, `building_at`, `buildings`
-- [ ] Camera 2D con pan a un dito e pinch-zoom
+- [x] Progetto Godot 4.4, renderer **Mobile**, 1080×1920, stretch `canvas_items` / `expand`, orientamento verticale → `project.godot`
+- [x] Rispetto della safe area (`DisplayServer.get_display_safe_area()`, con conversione schermo→viewport) → `ui/debug_hud.gd`
+- [x] Autoload `Database.gd`: carica `res://data/*.json`, espone `vi()`, `tier()`, `ammo_multiplier()`, `recipe()`, `building()`, con cache precalcolate
+- [x] Autoload `SimCore.gd`: tick loop a 20 Hz con accumulatore, cap anti-spirale, `tick_alpha()` per l'interpolazione, telemetria `ms/tick`
+- [x] Autoload `EventBus.gd`: segnali di comando e notifica già dichiarati
+- [x] `WorldState` con `terrain`, `building_at`, `buildings` in array paralleli + generazione deterministica dei giacimenti
+- [x] Camera 2D con pan a un dito, pinch-zoom **ancorato al punto** e clamp sulla mappa
+- [x] `GridRenderer` con culling sul rettangolo visibile (nessun asset richiesto)
+- [x] Pannello diagnostico a schermo: self test + i tre KPI del §14 misurati dal giorno uno
+- [x] `tools/check_all.sh`: invarianti Python + validità JSON + self test dell'engine in un comando
+- [ ] **Una build installata su un device fisico** entro il giorno 2 → serve il tuo Mac/keystore, vedi [`SETUP_EXPORT.md`](SETUP_EXPORT.md)
 
-**Fatto quando:** sul tuo telefono vedi una griglia vuota che puoi muovere e zoomare, e la console stampa `tier(ingot_iron) = 3, vi = 15.625` letto dal JSON.
+**Fatto quando:** sul tuo telefono vedi una griglia che puoi muovere e zoomare, e la console stampa `tier(ingot_iron) = 3, vi = 15.625` letto dal JSON.
 
-> ⚠️ Se salti la build su device fisico in questo sprint, scoprirai i problemi di touch e di safe area allo Sprint 6, quando costeranno dieci volte tanto.
+Stato verificato in headless su Godot 4.4.1:
+
+```
+tier(ingot_iron) = 3, vi = 15.625
+16/16 superati
+OK    mondo generato: ferro 270, rame 125, acqua 201, roccia 35
+OK    tick loop: 19 tick in 1.00 s (attesi 20, 20 Hz)
+```
+
+> ⚠️ **L'unica casella rimasta è anche la più importante.** Se salti la build su device fisico in questo sprint, scoprirai i problemi di touch, safe area e firma allo Sprint 6, quando costeranno dieci volte tanto.
+
+> ⚠️ **Trappola già disinnescata:** Godot non importa i `.json` come risorse. Senza il filtro `data/*.json` nel preset di esportazione, la build sul telefono parte **senza dati**. Il pannello diagnostico mostra un banner rosso a tutto schermo se succede — ma è meglio impostare il filtro subito ([`SETUP_EXPORT.md`](SETUP_EXPORT.md) §3).
 
 ---
 

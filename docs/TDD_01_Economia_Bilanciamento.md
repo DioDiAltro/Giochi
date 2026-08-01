@@ -2,7 +2,7 @@
 ### La spina dorsale matematica che tiene insieme difesa, industria e progressione incrementale
 
 > **Documento 2 di 3.** Ogni numero qui è verificato da `tools/balance_sim.py`.
-> Output completo: [`BALANCE_REPORT.txt`](BALANCE_REPORT.txt) · Foglio di calcolo: [`../data/balance_reference.csv`](../data/balance_reference.csv)
+> Output completo: [`BALANCE_REPORT.txt`](BALANCE_REPORT.txt) · Foglio di calcolo: [`balance_reference.csv`](balance_reference.csv)
 
 ---
 
@@ -395,7 +395,7 @@ python3 tools/balance_sim.py --check     # exit 1 = hai rotto un'invariante
 # 4. Rileggi le tabelle:
 python3 tools/balance_sim.py | less
 # 5. Rigenera il foglio di calcolo e il report:
-python3 tools/balance_sim.py --csv data/balance_reference.csv
+python3 tools/balance_sim.py --csv docs/balance_reference.csv
 python3 tools/balance_sim.py > docs/BALANCE_REPORT.txt
 ```
 

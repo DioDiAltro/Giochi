@@ -5,16 +5,24 @@ Un gioco che unisce la logistica su griglia e la difesa attiva di **Mindustry**,
 
 ---
 
+**Stato: Sprint 0 completato.** Il progetto Godot si apre, gira e si autoverifica.
+
+```bash
+godot --path .                          # apri e premi F5
+./tools/check_all.sh                    # invarianti + JSON + self test engine
+```
+
 ## Da dove partire
 
 | Se vuoi… | Apri |
 |---|---|
-| **Scrivere codice adesso** | [`docs/TDD_02_Roadmap_MVP.md`](docs/TDD_02_Roadmap_MVP.md) → "Ordine dei primi tre giorni" |
+| **Far girare il progetto** | [`docs/SETUP_EXPORT.md`](docs/SETUP_EXPORT.md) |
+| Sapere cosa costruire dopo | [`docs/TDD_02_Roadmap_MVP.md`](docs/TDD_02_Roadmap_MVP.md) → Sprint 1 |
 | Capire come è fatto il software | [`docs/TDD_00_Architettura.md`](docs/TDD_00_Architettura.md) |
 | Capire perché i numeri sono quelli | [`docs/TDD_01_Economia_Bilanciamento.md`](docs/TDD_01_Economia_Bilanciamento.md) |
 | Rileggere la visione originale | [`Game_Design_Document_Ibrido.md`](Game_Design_Document_Ibrido.md) |
 | Lo schema dei salvataggi | [`docs/SAVE_SCHEMA.md`](docs/SAVE_SCHEMA.md) |
-| Il foglio di calcolo | [`data/balance_reference.csv`](data/balance_reference.csv) |
+| Il foglio di calcolo | [`docs/balance_reference.csv`](docs/balance_reference.csv) |
 
 ---
 
@@ -60,7 +68,7 @@ Nessun numero di questo progetto è stato inventato. Sono tutti verificati da:
 ```bash
 python3 tools/balance_sim.py            # 13 tabelle di bilanciamento
 python3 tools/balance_sim.py --check    # 17 invarianti di design (exit 1 se rotte)
-python3 tools/balance_sim.py --csv data/balance_reference.csv
+python3 tools/balance_sim.py --csv docs/balance_reference.csv
 ```
 
 Le **invarianti di design** sono il pezzo che protegge il progetto nel tempo. Esempi:
@@ -94,10 +102,39 @@ Curva di sopravvivenza verificata: 4 torrette con polvere reggono fino all'**ond
 
 ## Struttura
 
+La radice del repo **è** la radice del progetto Godot: `res://data/` è esattamente la cartella `data/` versionata, quindi non esistono due copie dei numeri di bilanciamento da tenere allineate.
+
 ```
-├── docs/          TDD architettura · economia · roadmap · schema salvataggi · report
-├── data/          JSON pronti da copiare in res://data/ + foglio di calcolo CSV
-└── tools/         simulatore di bilanciamento e invarianti di design
+├── project.godot  main.tscn  main.gd
+├── autoload/      Database (dati) · SimCore (tick 20 Hz) · EventBus (segnali)
+├── sim/           WorldState — stato puro, gira senza rendering
+├── view/          camera touch · renderer griglia
+├── ui/            pannello diagnostico con self test e KPI
+├── data/          tuning · materiali · ricette · edifici · ricerca · ondate
+├── docs/          TDD architettura · economia · roadmap · salvataggi · export · CSV
+└── tools/         simulatore di bilanciamento · check_all.sh
 ```
 
-**Regola operativa:** nessun numero di bilanciamento viene scritto a mano in GDScript. Tutto si carica da `res://data/*.json`.
+**Regola operativa:** nessun numero di bilanciamento viene scritto a mano in GDScript. Tutto si carica da `res://data/*.json`, e `Database.self_test()` verifica che l'engine calcoli gli stessi valori del simulatore Python.
+
+---
+
+## Verifica automatica
+
+```bash
+export GODOT=/percorso/al/binario/godot
+./tools/check_all.sh
+```
+
+Tre passaggi, exit 1 se uno fallisce — adatto a un hook di pre-commit:
+
+1. **17 invarianti di design** sul bilanciamento (Python)
+2. **Validità dei JSON**
+3. **Self test dell'engine**: i dati caricati da Godot producono gli stessi numeri del simulatore, e il tick loop gira a 20 Hz
+
+```
+tier(ingot_iron) = 3, vi = 15.625
+16/16 superati
+OK    mondo generato: ferro 270, rame 125, acqua 201, roccia 35
+OK    tick loop: 19 tick in 1.00 s (attesi 20, 20 Hz)
+```

@@ -949,7 +949,7 @@ def export_csv(path):
 def main():
     if "--csv" in sys.argv:
         i = sys.argv.index("--csv")
-        path = sys.argv[i + 1] if len(sys.argv) > i + 1 else "data/balance_reference.csv"
+        path = sys.argv[i + 1] if len(sys.argv) > i + 1 else "docs/balance_reference.csv"
         export_csv(path)
         return 0
 

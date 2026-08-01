@@ -1,0 +1,23 @@
+# --- Godot ---
+.godot/
+/android/
+/ios/
+*.translation
+
+# Contiene percorsi locali e le PASSWORD del keystore di firma.
+# Parti da export_presets.cfg.template (vedi docs/SETUP_EXPORT.md).
+export_presets.cfg
+
+# --- Build ---
+/build/
+/export/
+*.apk
+*.aab
+*.ipa
+*.pck
+
+# --- Sistema ---
+.DS_Store
+Thumbs.db
+*.tmp
+__pycache__/
