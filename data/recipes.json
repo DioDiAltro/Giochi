@@ -1,0 +1,92 @@
+{
+  "_comment": "Ricette. 'in'/'out' sono quantita' PER CICLO. I fluidi usano il suffisso _mb. cycle_s e' il tempo nominale: il tempo reale e' cycle_s / (sigma_rete * moltiplicatori_ricerca * overclock).",
+  "_version": 1,
+
+  "recipes": [
+    {
+      "id": "drill_iron", "machine": "drill", "stage": 0,
+      "in": {}, "out": { "ore_iron": 1 }, "cycle_s": 2.00, "kw": 6,
+      "requires_ore_patch": "iron"
+    },
+    {
+      "id": "drill_copper", "machine": "drill", "stage": 0,
+      "in": {}, "out": { "ore_copper": 1 }, "cycle_s": 2.00, "kw": 6,
+      "requires_ore_patch": "copper"
+    },
+    {
+      "id": "pump_water", "machine": "pump", "stage": 0,
+      "in": {}, "out": { "water_mb": 240 }, "cycle_s": 2.00, "kw": 8,
+      "requires_ore_patch": "water"
+    },
+
+    {
+      "id": "crush_iron", "machine": "crusher", "stage": 1,
+      "in": { "ore_iron": 1 }, "out": { "dust_iron": 2 }, "cycle_s": 2.00, "kw": 12,
+      "_yield_note": "resa x2: e' il primo moltiplicatore che rende la catena lunga superiore alla fusione diretta"
+    },
+    {
+      "id": "crush_copper", "machine": "crusher", "stage": 1,
+      "in": { "ore_copper": 1 }, "out": { "dust_copper": 2 }, "cycle_s": 2.00, "kw": 12
+    },
+
+    {
+      "id": "wash_iron", "machine": "washer", "stage": 2,
+      "in": { "dust_iron": 2, "water_mb": 120 },
+      "out": { "pdust_iron": 2, "slag": 1 }, "cycle_s": 2.00, "kw": 18,
+      "unlocked_by": "proc_washing"
+    },
+    {
+      "id": "wash_copper", "machine": "washer", "stage": 2,
+      "in": { "dust_copper": 2, "water_mb": 120 },
+      "out": { "pdust_copper": 2, "slag": 1 }, "cycle_s": 2.00, "kw": 18,
+      "unlocked_by": "proc_washing"
+    },
+
+    {
+      "id": "smelt_iron", "machine": "furnace", "stage": 3,
+      "in": { "pdust_iron": 1 }, "out": { "ingot_iron": 1 }, "cycle_s": 3.00, "kw": 10
+    },
+    {
+      "id": "smelt_copper", "machine": "furnace", "stage": 3,
+      "in": { "pdust_copper": 1 }, "out": { "ingot_copper": 1 }, "cycle_s": 3.00, "kw": 10
+    },
+    {
+      "id": "smelt_direct_iron", "machine": "furnace", "stage": 3,
+      "in": { "ore_iron": 1 }, "out": { "ingot_iron": 1 }, "cycle_s": 4.50, "kw": 10,
+      "_shortcut": "SCORCIATOIA deliberatamente penalizzata: resa 1x e ciclo del 50% piu' lento. Esiste per far partire il giocatore e per fargli MISURARE quanto perde."
+    },
+    {
+      "id": "smelt_direct_copper", "machine": "furnace", "stage": 3,
+      "in": { "ore_copper": 1 }, "out": { "ingot_copper": 1 }, "cycle_s": 4.50, "kw": 10,
+      "_shortcut": true
+    },
+
+    {
+      "id": "compact_slag", "machine": "compactor", "stage": 2,
+      "in": { "slag": 2 }, "out": { "briquette": 1 }, "cycle_s": 2.00, "kw": 14,
+      "unlocked_by": "pow_briquette"
+    },
+    {
+      "id": "burn_briquette", "machine": "thermal_generator", "stage": 0,
+      "in": { "briquette": 1 }, "out": { "kw_seconds": 300 }, "cycle_s": 5.00, "kw": -60,
+      "unlocked_by": "pow_briquette",
+      "_note": "5.00 s NON e' arbitrario: e' l'unico valore che chiude esattamente il ciclo fanghiglia->energia della base di riferimento (2 Purificatori:1 Compattatore, 1.00 bricchette/s per 5 generatori)."
+    },
+
+    {
+      "id": "alloy_conductive", "machine": "induction_foundry", "stage": 4,
+      "in": { "ingot_copper": 2, "ingot_iron": 1, "water_mb": 200 },
+      "out": { "alloy_cond": 1 }, "cycle_s": 6.00, "kw": 90,
+      "unlocked_by": "proc_alloy",
+      "multiblock": "2x2",
+      "_note": "Primo multi-blocco: richiede 3 input eterogenei simultanei (2 solidi diversi + 1 fluido) su 4 facce distinte. E' il salto di complessita' ingegneristica dell'MVP."
+    },
+
+    {
+      "id": "server_upload", "machine": "server", "stage": 5,
+      "in": { "<any_solid>": 1 }, "out": { "data": "vi(materiale) * server_data_per_vi" },
+      "cycle_s": 0.50, "kw": 25,
+      "_note": "Il Server CONSUMA il materiale: e' il sink terminale dell'economia. Throughput massimo 2.0 item/s (2.6 dopo 'Bus Dati Parallelo')."
+    }
+  ]
+}

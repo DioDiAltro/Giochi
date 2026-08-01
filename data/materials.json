@@ -1,0 +1,122 @@
+{
+  "_comment": "VI (Valore Industriale) NON va scritto qui: e' derivato a runtime come base_value * lambda_vi^refinement_tier. Duplicarlo significa poterlo desincronizzare.",
+  "_version": 1,
+
+  "solids": [
+    {
+      "id": "ore_iron",
+      "name": "Minerale di Ferro Grezzo",
+      "refinement_tier": 0,
+      "base_value": 1.00,
+      "stack": 200,
+      "color": "#7A6A5A",
+      "valid_ammo": true
+    },
+    {
+      "id": "ore_copper",
+      "name": "Minerale di Rame Grezzo",
+      "refinement_tier": 0,
+      "base_value": 1.20,
+      "stack": 200,
+      "color": "#8A6242",
+      "valid_ammo": true
+    },
+    {
+      "id": "dust_iron",
+      "name": "Polvere di Ferro",
+      "refinement_tier": 1,
+      "base_value": 1.00,
+      "stack": 200,
+      "color": "#9A9A9A",
+      "valid_ammo": true
+    },
+    {
+      "id": "dust_copper",
+      "name": "Polvere di Rame",
+      "refinement_tier": 1,
+      "base_value": 1.20,
+      "stack": 200,
+      "color": "#C07A4A",
+      "valid_ammo": true
+    },
+    {
+      "id": "pdust_iron",
+      "name": "Polvere di Ferro Purificata",
+      "refinement_tier": 2,
+      "base_value": 1.00,
+      "stack": 200,
+      "color": "#C4C4C8",
+      "valid_ammo": true
+    },
+    {
+      "id": "pdust_copper",
+      "name": "Polvere di Rame Purificata",
+      "refinement_tier": 2,
+      "base_value": 1.20,
+      "stack": 200,
+      "color": "#E0A070",
+      "valid_ammo": true
+    },
+    {
+      "id": "ingot_iron",
+      "name": "Lingotto di Ferro",
+      "refinement_tier": 3,
+      "base_value": 1.00,
+      "stack": 100,
+      "color": "#D8D8DC",
+      "valid_ammo": true,
+      "build_material": true
+    },
+    {
+      "id": "ingot_copper",
+      "name": "Lingotto di Rame",
+      "refinement_tier": 3,
+      "base_value": 1.20,
+      "stack": 100,
+      "color": "#F0A860",
+      "valid_ammo": true,
+      "build_material": true
+    },
+    {
+      "id": "alloy_cond",
+      "name": "Lingotto di Lega Conduttiva",
+      "refinement_tier": 4,
+      "base_value": 1.50,
+      "stack": 50,
+      "color": "#7FE0D0",
+      "valid_ammo": true,
+      "build_material": true
+    },
+    {
+      "id": "slag",
+      "name": "Fanghiglia",
+      "refinement_tier": 1,
+      "base_value": 0.35,
+      "stack": 200,
+      "color": "#5A4A3A",
+      "valid_ammo": false,
+      "byproduct": true
+    },
+    {
+      "id": "briquette",
+      "name": "Bricchetta di Scoria",
+      "refinement_tier": 2,
+      "base_value": 0.35,
+      "stack": 200,
+      "color": "#3A2E22",
+      "valid_ammo": false,
+      "fuel_seconds": 5.0
+    }
+  ],
+
+  "fluids": [
+    {
+      "id": "water",
+      "name": "Acqua",
+      "unit": "mB",
+      "color": "#3C78C8",
+      "pipe_capacity_mb": 600,
+      "_note": "I fluidi NON sono conferibili al Core: non generano Dati. Servono solo come input di processo."
+    }
+  ]
+}

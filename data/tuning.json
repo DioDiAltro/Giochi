@@ -1,0 +1,86 @@
+{
+  "_comment": "Costanti globali del bilanciamento. UNICA fonte di verita': tools/balance_sim.py legge gli stessi valori. Non duplicare questi numeri nel codice GDScript, caricali da qui.",
+  "_version": 1,
+
+  "economy": {
+    "lambda_vi": 2.5,
+    "_lambda_vi": "base esponenziale del Valore Industriale: VI = base_value * lambda^R",
+    "beta_ammo": 1.585,
+    "_beta_ammo": "esponente del moltiplicatore danno munizioni: M = (R+1)^beta. 1.585 = log2(3)",
+    "server_data_per_vi": 1.0,
+    "server_throughput_items_s": 2.0,
+    "server_throughput_items_s_upgraded": 2.6
+  },
+
+  "simulation": {
+    "tick_hz": 20,
+    "tick_seconds": 0.05,
+    "slots_per_tile": 3,
+    "fixed_point_shift": 8,
+    "_fixed_point_shift": "posizioni sui nastri in 1/256 di slot per evitare drift float",
+    "graph_resolve_interval_ticks": 40,
+    "flowfield_debounce_ms": 500,
+    "autosave_interval_s": 30
+  },
+
+  "grid": {
+    "width": 96,
+    "height": 96,
+    "tile_pixels": 32,
+    "core_size": 3
+  },
+
+  "threat": {
+    "hp_base_b0": 150.0,
+    "wave_growth_a": 0.22,
+    "wave_growth_p": 1.55,
+    "threat_industrial_exponent": 0.80,
+    "_threat_industrial_exponent": "DEVE restare < 1.0: garantisce che espandere la produzione sia net-positivo",
+    "theta_reference": 20.0,
+    "theta_average_window_s": 60.0,
+    "wave_interval_s_base": 120.0,
+    "wave_interval_s_decrement_per_wave": 1.5,
+    "wave_interval_s_min": 45.0,
+    "armor_damage_floor": 0.15,
+    "corridor_tiles_reference": 20.0
+  },
+
+  "power": {
+    "starter_generator_kw": 120,
+    "starter_generator_unique": true,
+    "thermal_generator_kw": 60,
+    "thermal_burn_seconds": 5.0,
+    "cable_loss_per_tile": 0.008,
+    "cable_loss_max": 0.35,
+    "brownout_model": "sigma = min(1, supply_eff / demand); tutte le macchine della rete girano a velocita' * sigma"
+  },
+
+  "idle": {
+    "offline_efficiency_base": 0.40,
+    "offline_cap_hours_base": 8.0,
+    "offline_efficiency_upgraded": 0.55,
+    "offline_cap_hours_upgraded": 12.0,
+    "wave_timer_frozen_offline": true,
+    "base_invulnerable_offline": true,
+    "clock_rollback_policy": "se now < last_exit -> dt = 0 e si registra un flag di sospetto"
+  },
+
+  "active_ability": {
+    "overclock_multiplier": 2.5,
+    "overclock_duration_s": 45.0,
+    "overclock_cooldown_s": 600.0,
+    "overclock_power_penalty": 1.25,
+    "_overclock_power_penalty": "l'Overclock alza del 25% la domanda: se la rete non ha margine si va in brownout. E' un costo strategico, non un bonus gratuito."
+  },
+
+  "research": {
+    "repeatable_cost_base": 300,
+    "repeatable_cost_growth": 1.35,
+    "ballistics_damage_per_level": 0.06
+  },
+
+  "starting_stock": {
+    "ingot_iron": 60,
+    "ingot_copper": 20
+  }
+}

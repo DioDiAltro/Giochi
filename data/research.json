@@ -1,0 +1,89 @@
+{
+  "_comment": "Albero di ricerca MVP: 12 nodi + 1 upgrade ripetibile. 'grid' e' la posizione nel grafo a nodi del Laboratorio (colonna, riga) — serve per il layout dell'UI stile Upload Lab.",
+  "_version": 1,
+
+  "nodes": [
+    {
+      "id": "log_belts_1", "name": "Nastri Rinforzati", "cost": 120, "prereq": [], "grid": [0, 0],
+      "effects": [{ "type": "unlock_building", "value": "belt_fast" }],
+      "desc": "Sblocca il Nastro ad Alta Portata (6 -> 9 item/s)."
+    },
+    {
+      "id": "mine_drills_1", "name": "Punte al Tungsteno", "cost": 150, "prereq": [], "grid": [0, 1],
+      "effects": [{ "type": "machine_speed", "target": "drill", "value": 1.25 }],
+      "desc": "Trivelle +25% di velocita'."
+    },
+    {
+      "id": "def_ballistics", "name": "Calibratura Balistica", "cost": 300, "prereq": [], "grid": [0, 2],
+      "repeatable": { "max_level": 10, "cost_base": 300, "cost_growth": 1.35 },
+      "effects": [{ "type": "turret_damage_add", "value": 0.06 }],
+      "desc": "+6% danno torrette per livello. Costo C(L) = 300 * 1.35^L."
+    },
+    {
+      "id": "proc_washing", "name": "Purificazione a Umido", "cost": 400, "prereq": ["mine_drills_1"], "grid": [1, 1],
+      "effects": [
+        { "type": "unlock_building", "value": "washer" },
+        { "type": "unlock_building", "value": "pump" },
+        { "type": "unlock_recipe", "value": "wash_iron" },
+        { "type": "unlock_recipe", "value": "wash_copper" }
+      ],
+      "desc": "Sblocca lo stadio di Lavaggio: Purificatore + Pompa Idrica + gestione fluidi.",
+      "_pivot": "NODO CARDINE: e' qui che il gioco smette di essere una fabbrica banale. Va reso impossibile da mancare (tutorial contestuale)."
+    },
+    {
+      "id": "pow_briquette", "name": "Recupero Scorie", "cost": 550, "prereq": ["proc_washing"], "grid": [2, 0],
+      "effects": [
+        { "type": "unlock_building", "value": "compactor" },
+        { "type": "unlock_building", "value": "thermal_generator" }
+      ],
+      "desc": "Trasforma la Fanghiglia di scarto in combustibile. Chiude il ciclo energetico."
+    },
+    {
+      "id": "data_servers_1", "name": "Bus Dati Parallelo", "cost": 900, "prereq": ["proc_washing"], "grid": [2, 2],
+      "effects": [{ "type": "server_throughput", "value": 2.6 }],
+      "desc": "Throughput dei Server da 2.0 a 2.6 item/s."
+    },
+    {
+      "id": "def_turret_frag", "name": "Testate a Frammentazione", "cost": 1800, "prereq": ["def_ballistics"], "grid": [1, 3],
+      "effects": [{ "type": "unlock_building", "value": "turret_frag" }],
+      "desc": "Sblocca la Torretta a Frammentazione (AoE, solo bersagli di terra)."
+    },
+    {
+      "id": "proc_alloy", "name": "Metallurgia Induttiva", "cost": 2400, "prereq": ["pow_briquette", "data_servers_1"], "grid": [3, 1],
+      "effects": [
+        { "type": "unlock_building", "value": "induction_foundry" },
+        { "type": "unlock_recipe", "value": "alloy_conductive" }
+      ],
+      "desc": "Sblocca la Fonderia a Induzione 2x2 e la Lega Conduttiva (R4)."
+    },
+    {
+      "id": "idle_uplink_1", "name": "Uplink Autonomo", "cost": 3000, "prereq": ["data_servers_1"], "grid": [3, 3],
+      "effects": [
+        { "type": "offline_efficiency", "value": 0.55 },
+        { "type": "offline_cap_hours", "value": 12.0 }
+      ],
+      "desc": "Rendimento offline 40% -> 55%, tetto 8h -> 12h."
+    },
+    {
+      "id": "pow_efficiency", "name": "Isolamento Criogenico", "cost": 3500, "prereq": ["pow_briquette"], "grid": [3, 0],
+      "effects": [{ "type": "machine_power_mult", "value": 0.80 }],
+      "desc": "-20% di consumo energetico su tutti i macchinari."
+    },
+    {
+      "id": "act_overclock", "name": "Protocollo Overclock", "cost": 5000, "prereq": ["proc_alloy"], "grid": [4, 1],
+      "effects": [{ "type": "unlock_ability", "value": "overclock" }],
+      "desc": "Abilita' attiva: x2.5 velocita' fabbrica per 45s, cooldown 10 min, +25% domanda energetica."
+    },
+    {
+      "id": "data_compress", "name": "Compressione Entropica", "cost": 9000, "prereq": ["idle_uplink_1", "proc_alloy"], "grid": [4, 3],
+      "effects": [{ "type": "server_data_per_vi", "value": 1.5 }],
+      "desc": "Dati generati per unita' di VI x1.5. Ultimo nodo dell'MVP."
+    }
+  ],
+
+  "_totals": {
+    "cost_all_nodes": 27120,
+    "estimated_time_to_complete_minutes": 12,
+    "_note": "12 minuti di gioco ATTIVO ininterrotto con produzione ottimale. In pratica l'MVP dura 2-4 ore perche' il collo di bottiglia e' costruire la fabbrica, non accumulare Dati."
+  }
+}
