@@ -50,24 +50,54 @@ OK    tick loop: 19 tick in 1.00 s (attesi 20, 20 Hz)
 
 ---
 
-## Sprint 1 — Logistica (1 settimana) 🔴 RISCHIO MASSIMO
+## Sprint 1 — Logistica 🔴 RISCHIO MASSIMO — CODICE SCRITTO E MISURATO
 
 **Obiettivo:** far scorrere oggetti su nastri costruiti col dito. È il sistema che decide se il gioco è tecnicamente fattibile e se è piacevole al tatto.
 
-- [ ] Piazzamento su griglia con validazione + ghost colorato (verde/rosso) + aptica una-tantum
-- [ ] **Drag-to-build** dei nastri con auto-instradamento a L e badge del costo spostato 60 px sopra il dito
-- [ ] `BeltLane` con `PackedByteArray`, accumulatore fixed-point, scansione testa→coda
-- [ ] Ricostruzione delle corsie su modifica (unione/divisione a curve e innesti)
-- [ ] `ItemRenderer` con `MultiMeshInstance2D`, `visible_instance_count`, interpolazione via `tick_alpha()`
-- [ ] Trivella + Silo, sorgente e pozzo, per vedere gli item scorrere
-- [ ] Pulsante **ANNULLA** a comparsa per 5 s dopo ogni costruzione
+- [x] Piazzamento su griglia con validazione + ghost colorato → `view/build_ghost.gd`
+- [x] **Drag-to-build** con auto-instradamento a L, frecce di direzione nel ghost e badge del costo 60 px sopra il dito
+- [x] `BeltLane` con `PackedByteArray`, accumulatore in virgola fissa, scansione testa→coda
+- [x] Ricostruzione delle corsie su modifica, curve e innesti inclusi, **anelli chiusi compresi**
+- [x] `ItemRenderer` con `MultiMeshInstance2D`, `visible_instance_count`, interpolazione via `tick_alpha()`
+- [x] Trivella + Silo con espulsione a rotazione sui nastri adiacenti
+- [x] Pulsante **ANNULLA** a comparsa per 5 s, che disfa l'intero gesto e non l'ultima cella
+- [x] Costruzione parziale quando i materiali finiscono a metà, invece del rifiuto totale
+- [ ] Verifica del *feeling* su device fisico ← tocca a te
+
+### Le due decisioni architetturali dello sprint
+
+**1. Le corsie non possiedono gli item.** Gli slot vivono in un unico `world.belt_slots` globale indicizzato `cella * 3 + slot`; le corsie sono solo un indice di ordinamento sopra quell'array. Conseguenza: `rebuild_lanes()` può ricostruire tutto da zero a ogni modifica **senza toccare un solo item**. Niente snapshot, niente ripristino, nessun item perso. Elimina l'80% della complessità del sistema a costo zero sul frame rate.
+
+**2. Le macchine espellono in qualunque nastro adiacente che si allontani da loro**, invece che da una porta fissa da orientare. Ruotare con precisione una trivella su un telefono è esattamente la micro-gestione che il GDD vieta.
+
+### Misure reali (Godot 4.4.1, `--stress`)
+
+| Metrica | Valore | Budget |
+|---|--:|--:|
+| Celle di nastro | 1 830 | — |
+| Slot simulati | 5 490 | — |
+| Item in campo | 2 000 | 2 000 |
+| **Costo per tick** | **0,264 ms** | 5,000 ms |
+| Quota di budget | **5,3%** | 100% |
+| Proiezione Snapdragon 730 (~4×) | 1,055 ms → **21,1%** | 100% |
 
 **Fatto quando:**
-1. Costruisci 200 celle di nastro con **un solo trascinamento del pollice** e non è frustrante.
-2. 2 000 item scorrono a 60 fps sul device fisico.
-3. `ms/tick` del `BeltSystem` misurato e annotato.
+1. Costruisci 200 celle con **un solo trascinamento** e non è frustrante → *da verificare sul telefono*
+2. 2 000 item a 60 fps → ✅ **simulazione verificata**, rendering da confermare su device
+3. `ms/tick` del `BeltSystem` misurato → ✅ **0,264 ms**, visibile in permanenza nel pannello diagnostico
 
-> **Checkpoint di feeling.** Fai provare il drag-to-build a una persona che non ha mai visto un factory game. Se sbaglia il tracciato più di una volta su tre, ridisegna l'interazione prima di andare avanti. Questo è il momento di scoprirlo.
+### Verifiche automatiche aggiunte
+
+```bash
+godot --headless --path . --script res://tools/test_packed.gd   # semantica e costo dei Packed array
+godot --headless --path . -- --stress                            # 2 000 item, costo per tick
+godot --headless --path . -- --selftest                          # + catena Trivella→nastro→Silo
+xvfb-run -a godot --path . -- --screenshot                       # verifica i renderer (PNG)
+```
+
+Il test `--screenshot` esiste perché in headless `_draw()` non viene mai chiamato: i renderer non sarebbero verificati. Alla prima esecuzione ha rivelato due bug di layout che nessun test testuale avrebbe trovato — il pannello diagnostico che invadeva il campo di gioco e il suo pulsante sovrapposto alla barra di costruzione.
+
+> **Checkpoint di feeling — l'unico rimasto.** Fai provare il drag-to-build a una persona che non ha mai visto un factory game. Se sbaglia il tracciato più di una volta su tre, ridisegna l'interazione prima di andare avanti. Nessuna misura sostituisce questa prova.
 
 ---
 

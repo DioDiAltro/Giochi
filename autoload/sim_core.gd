@@ -19,9 +19,14 @@ const MAX_CATCHUP_TICKS := 4
 var world: WorldState
 var running := true
 
+# I sistemi sono referenze tipizzate, non un array generico: `s.call(&"tick")`
+# passa dal dispatch dinamico ed e' misurabilmente piu' lento in un loop caldo.
+var belts: BeltSystem
+var machines: MachineSystem
+var build: BuildSystem
+
 var tick_index := 0
 var _accum := 0.0
-var _systems: Array = []
 
 # --- telemetria: e' un KPI di uscita dello Sprint 6, si misura da subito ---
 var last_tick_usec := 0
@@ -33,10 +38,20 @@ var ticks_this_frame := 0
 func _ready() -> void:
 	world = WorldState.new(Database.grid_w, Database.grid_h)
 	world.generate(918273)
-	# Sprint 1+: qui verranno registrati i sistemi, nell'ordine del TDD 00 §3
-	# (Power -> Fluid -> Machine -> Belt -> Data -> Combat). L'ordine non e'
-	# arbitrario: sigma va calcolato prima che le macchine avanzino.
-	_systems = []
+	for k: Variant in Database.tuning.get("starting_stock", {}):
+		world.add_material(StringName(k), float(Database.tuning["starting_stock"][k]))
+
+	# Ordine del TDD 00 §3: Energia -> Fluidi -> Macchine -> Nastri -> Dati ->
+	# Combattimento. Non e' arbitrario: le macchine devono avanzare prima dei
+	# nastri, cosi' un output prodotto in questo tick puo' partire subito.
+	# Sprint 1 ne ha due; gli altri si inseriscono qui senza toccare il loop.
+	belts = BeltSystem.new(world)
+	machines = MachineSystem.new(world, belts)
+	build = BuildSystem.new(world, belts)
+
+
+func _process(delta: float) -> void:
+	build.process_ui(delta)
 
 
 func _physics_process(delta: float) -> void:
@@ -59,8 +74,8 @@ func _tick() -> void:
 	var t0 := Time.get_ticks_usec()
 	tick_index += 1
 
-	for s: Object in _systems:
-		s.call(&"tick", tick_index)
+	machines.tick(tick_index)
+	belts.tick(tick_index)
 
 	# Attivita' a bassa frequenza, sfalsate su tick diversi per non sommarle
 	# tutte nello stesso frame.

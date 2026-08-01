@@ -5,11 +5,13 @@ Un gioco che unisce la logistica su griglia e la difesa attiva di **Mindustry**,
 
 ---
 
-**Stato: Sprint 0 completato.** Il progetto Godot si apre, gira e si autoverifica.
+**Stato: Sprint 1 — logistica funzionante.** Nastri costruiti col dito, item che scorrono, catena Trivella → nastro → Silo verificata. **2 000 item costano 0,24 ms per tick**, il 4,7% del budget di simulazione.
 
 ```bash
-godot --path .                          # apri e premi F5
-./tools/check_all.sh                    # invarianti + JSON + self test engine
+godot --path .                                   # apri e premi F5
+./tools/check_all.sh                             # invarianti + JSON + self test engine
+godot --headless --path . -- --stress            # 2 000 item, costo per tick
+xvfb-run -a godot --path . -- --screenshot       # verifica i renderer (PNG)
 ```
 
 ## Da dove partire

@@ -41,6 +41,13 @@ var _tier: Dictionary = {}
 var _color: Dictionary = {}
 var _ammo_mult: PackedFloat32Array = PackedFloat32Array()
 
+## Sui nastri un materiale e' un singolo byte, non una StringName: servono un
+## indice compatto e la sua inversa. L'ordine e' quello di materials.json ed e'
+## quindi stabile fra sessioni — importante per i salvataggi.
+var material_ids: Array[StringName] = []
+var _material_index: Dictionary = {}
+var _colors_by_index: PackedColorArray = PackedColorArray()
+
 var loaded := false
 var errors: PackedStringArray = PackedStringArray()
 
@@ -165,6 +172,8 @@ func _build_caches() -> void:
 	_vi.clear()
 	_tier.clear()
 	_color.clear()
+	material_ids.clear()
+	_material_index.clear()
 	for id: StringName in materials:
 		var m: Dictionary = materials[id]
 		var r := int(m.get("refinement_tier", 0))
@@ -172,6 +181,12 @@ func _build_caches() -> void:
 		_tier[id] = r
 		_vi[id] = base * pow(lambda_vi, float(r))
 		_color[id] = Color(String(m.get("color", "#FFFFFF")))
+		_material_index[id] = material_ids.size()
+		material_ids.append(id)
+
+	_colors_by_index.resize(material_ids.size())
+	for i in material_ids.size():
+		_colors_by_index[i] = _color[material_ids[i]]
 	# I tier arrivano al massimo a 8 nell'MVP; la tabella e' minuscola, tenerla
 	# precalcolata evita una pow() per ogni colpo sparato.
 	_ammo_mult.resize(9)
@@ -197,6 +212,23 @@ func material_color(material_id: StringName) -> Color:
 func material_name(material_id: StringName) -> String:
 	var m: Dictionary = materials.get(material_id, {})
 	return String(m.get("name", String(material_id)))
+
+
+## Indice compatto del materiale, per lo storage a byte sui nastri.
+func material_index(material_id: StringName) -> int:
+	return int(_material_index.get(material_id, -1))
+
+
+func material_from_index(i: int) -> StringName:
+	if i < 0 or i >= material_ids.size():
+		return &""
+	return material_ids[i]
+
+
+func color_from_index(i: int) -> Color:
+	if i < 0 or i >= _colors_by_index.size():
+		return Color.MAGENTA
+	return _colors_by_index[i]
 
 
 ## Moltiplicatore di danno di una munizione di tier R: (R+1)^beta.

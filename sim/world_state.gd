@@ -10,6 +10,11 @@ class_name WorldState extends RefCounted
 enum Terrain { EMPTY = 0, ROCK = 1, ORE_IRON = 2, ORE_COPPER = 3, WATER = 4 }
 
 const NO_BUILDING := -1
+const NO_BELT := 255
+const SLOTS_PER_TILE := 3
+
+## 0 = Est, 1 = Sud, 2 = Ovest, 3 = Nord
+const DIR_VEC := [Vector2i(1, 0), Vector2i(0, 1), Vector2i(-1, 0), Vector2i(0, -1)]
 
 var w: int
 var h: int
@@ -18,6 +23,13 @@ var n: int
 var terrain: PackedByteArray
 var building_at: PackedInt32Array     ## indice in `buildings`, o NO_BUILDING
 var buildings: Array = []
+
+# --- nastri ---
+# Gli item NON sono nodi: sono byte. belt_slots ha 3 slot per cella, indicizzati
+# `cella * 3 + slot`, e contiene material_index + 1 (0 = vuoto).
+var belt_dir: PackedByteArray         ## direzione 0..3, NO_BELT se non c'e' nastro
+var belt_slots: PackedByteArray       ## n * 3
+var belt_speed: PackedByteArray       ## 0 = base, 1 = veloce
 
 var core_cell: Vector2i
 
@@ -44,6 +56,13 @@ func _init(width: int = 96, height: int = 96) -> void:
 	building_at = PackedInt32Array()
 	building_at.resize(n)
 	building_at.fill(NO_BUILDING)
+	belt_dir = PackedByteArray()
+	belt_dir.resize(n)
+	belt_dir.fill(NO_BELT)
+	belt_speed = PackedByteArray()
+	belt_speed.resize(n)
+	belt_slots = PackedByteArray()
+	belt_slots.resize(n * SLOTS_PER_TILE)
 	core_cell = Vector2i(w / 2, h / 2)
 
 
@@ -69,11 +88,50 @@ func terrain_at(x: int, y: int) -> int:
 	return terrain[y * w + x] if in_bounds(x, y) else Terrain.ROCK
 
 
+## Cella adiacente in direzione `dir`, o -1 se esce dalla mappa.
+## Il controllo sulla x e' necessario: senza, muoversi a Est dall'ultima colonna
+## finirebbe sulla prima colonna della riga successiva invece che fuori mappa.
+func neighbor(c: int, dir: int) -> int:
+	var x := c % w
+	var y := c / w
+	match dir:
+		0: return c + 1 if x < w - 1 else -1
+		1: return c + w if y < h - 1 else -1
+		2: return c - 1 if x > 0 else -1
+		_: return c - w if y > 0 else -1
+
+
+func cell_to_v(c: int) -> Vector2i:
+	return Vector2i(c % w, c / w)
+
+
+func has_belt(c: int) -> bool:
+	return c >= 0 and belt_dir[c] != NO_BELT
+
+
+func material_id_to_name(i: int) -> StringName:
+	return Database.material_from_index(i)
+
+
+func material_name_to_id(m: StringName) -> int:
+	return Database.material_index(m)
+
+
+func building_of(c: int) -> Building:
+	if c < 0:
+		return null
+	var i := building_at[c]
+	return buildings[i] if i != NO_BUILDING else null
+
+
 func is_free(x: int, y: int) -> bool:
 	if not in_bounds(x, y):
 		return false
 	var i := y * w + x
-	return building_at[i] == NO_BUILDING and terrain[i] != Terrain.ROCK
+	return building_at[i] == NO_BUILDING \
+		and belt_dir[i] == NO_BELT \
+		and terrain[i] != Terrain.ROCK \
+		and terrain[i] != Terrain.WATER
 
 
 ## Valida un footprint rettangolare. Deve restare sotto i 0.1 ms: viene chiamata
