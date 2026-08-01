@@ -297,27 +297,93 @@ Crescita 1,35 con bonus additivo: il classico incrementale sano. Il costo esplod
 
 ---
 
-## 8. Progressione offline
+## 8. La ricompensa da combattimento
 
-| Assenza | η=0,40 cap 8 h (base) | η=0,55 cap 12 h (dopo Uplink) |
-|--:|--:|--:|
-| 30 min | 45 000 | 61 875 |
-| 2 h | 180 000 | 247 500 |
-| 8 h | **720 000** | 990 000 |
-| 12 h | 720 000 (capped) | **1 485 000** |
-| 24 h | 720 000 (capped) | 1 485 000 (capped) |
+Poiché il timer delle ondate **avanza anche a gioco chiuso** (§9), respingere un'ondata deve dare qualcosa. Altrimenti l'avanzamento sarebbe solo una punizione per essersi assentati: torneresti a difficoltà più alta e a parità di ricchezza.
 
-*(Dati, con Θ = 62,5. Una notte piena vale ~3,2 h di gioco attivo.)*
+$$D_{\text{ondata}} = \kappa \cdot \Theta \cdot \text{intervallo}(n), \qquad \kappa = 0{,}20$$
 
-Tre vincoli che rendono l'idle **sicuro senza renderlo inutile**:
+La scelta cruciale è **cosa** mettere nella formula. La ricompensa **non** è funzione degli HP nemici, ma una frazione di ciò che l'industria produce nel tempo di un'ondata. Ne segue che il combattimento vale una quota **fissa** dei Dati totali:
 
-1. **Base invulnerabile, timer ondate congelato.** Rientri esattamente all'ondata da cui eri uscito. Zero ansia da rientro.
-2. **Accredito basato sul throughput risolto**, non sulla produzione teorica: colli di bottiglia, energia insufficiente e silo pieni valgono anche offline. Una fabbrica mal progettata rende poco anche di notte — la competenza del giocatore conta sempre.
-3. **Tetto ai silo.** Senza questo l'offline genera risorse infinite e la parte fabbrica muore. Con questo, ampliare lo stoccaggio diventa una scelta idle sensata.
+$$\frac{\kappa}{1+\kappa} = 16{,}7\%$$
+
+a qualunque scala, a qualunque ondata, con qualunque `Θ`. La logistica resta il motore trainante **per costruzione**, non per taratura fortunata — e nessuna modifica futura al bilanciamento può romperlo per sbaglio. (Invariante 14.)
+
+| Ondata | Interv. | D industria | D combatt. | Quota | Mun. VI (R1) | **Netto** |
+|--:|--:|--:|--:|--:|--:|--:|
+| 5 | 112 s | 7 031 | 1 406 | 16,7% | 19 | **+1 387** |
+| 20 | 90 s | 5 625 | 1 125 | 16,7% | 82 | **+1 043** |
+| 40 | 60 s | 3 750 | 750 | 16,7% | 205 | **+545** |
+| 50 | 45 s | 2 812 | 562 | 16,7% | 281 | **+281** |
+| 70 | 45 s | 2 812 | 562 | 16,7% | 456 | **+106** |
+
+Il **netto** (Dati guadagnati meno il VI di munizioni bruciato) resta positivo per tutto l'arco MVP e si assottiglia progressivamente: oltre l'ondata ~68 difendersi diventa un **costo netto**. È una texture di late game voluta — a un certo punto la guerra smette di ripagarsi e devi decidere se vale la pena tenere il fronte così avanzato.
 
 ---
 
-## 9. Procedura di ri-bilanciamento
+## 9. Progressione offline — il Fronte Autonomo
+
+**Il timer delle ondate avanza a gioco chiuso.** Il vincolo "la base non deve mai essere distrutta in mia assenza" resta però intatto, perché l'esito di un'ondata offline non è vittoria-o-sconfitta ma **vittoria-o-stallo**:
+
+| Se la difesa | Esito |
+|---|---|
+| regge | L'ondata è respinta. Consuma munizioni, dà Dati, il contatore avanza. |
+| **non** regge | **STALLO.** Il fronte si blocca su quell'ondata e il timer si ferma lì. La linea tiene, non guadagna terreno, e nulla viene distrutto. |
+
+### La riga che decide se l'idle è davvero sicuro
+
+La minaccia offline va calcolata sul **`Θ` dello snapshot di uscita**, non sul `Θ` ridotto dalla produzione idle. Il perché, in numeri:
+
+| Formula usata offline | Stallo di L3 | Tetto online di L3 | Conseguenza |
+|---|:-:|:-:|---|
+| `hp_budget(n, Θ × η)` | ondata **49** | ondata 35 | ❌ Rientri 14 ondate oltre ciò che puoi vincere da sveglio. Partita già persa. |
+| `hp_budget(n, Θ)` | ondata **35** | ondata 35 | ✅ Coincidono. |
+
+Con la formula corretta vale la regola, comunicabile al giocatore in una frase:
+
+> **L'idle ti porta esattamente al limite della tua difesa attuale, e non un'ondata oltre.**
+
+Protetta dall'invariante 15b, che confronta i due numeri a ogni esecuzione del simulatore.
+
+### Quanto si avanza davvero
+
+8 ore di assenza, partendo dall'ondata 20, `Θ` = 62,5:
+
+| Schieramento | Ondate guadagnate | Arriva a | Causa stallo |
+|---|--:|:-:|:-:|
+| L1 · 4 Cinetiche, mun. R1 | 0 | 20 | dps |
+| L2 · 4 Cinetiche, mun. R3 | 0 | 20 | dps |
+| L3 · 8 Cinetiche, mun. R3, bal. 5 | **15** | 35 | dps |
+| L4 · 8 Cin + 4 Frag, mun. R4, bal. 10 | **47** | 67 | dps |
+| L5 · 16 Cin + 8 Frag, mun. R4, bal. 20 | **116** | 136 | dps |
+
+Progressione monotona e verificata (invariante 16). Questo aggiunge al design **la freccia che mancava**: prima le torrette erano un puro costo, ora determinano quanto lontano arrivi mentre non giochi. Investire in difesa **compra letteralmente avanzamento idle** — ed è così che il terzo genere entra nello strato incrementale invece di restarne fuori.
+
+Nota su L1 e L2: guadagnano zero ondate perché all'ondata 20 sono **già oltre** il proprio tetto. Non è un bug: significa che stavano già perdendo online e l'offline non regala nulla.
+
+### Dati accumulati
+
+| Assenza | η=0,40 cap 8 h | η=0,55 cap 12 h |
+|--:|--:|--:|
+| 30 min | 46 873 | 65 942 |
+| 2 h | 181 873 | 251 567 |
+| 8 h | **721 873** | 994 067 |
+| 12 h | 721 873 *(capped)* | **1 489 067** |
+| 24 h | 721 873 *(capped)* | 1 489 067 *(capped)* |
+
+*(Industria + combattimento − munizioni consumate, scenario L3 dall'ondata 20.)*
+
+Tre vincoli che rendono l'idle sicuro senza renderlo inutile:
+
+1. **Vittoria-o-stallo, mai sconfitta.** La base è invulnerabile. Zero ansia da rientro.
+2. **Accredito basato sul throughput risolto**, non sulla produzione teorica: colli di bottiglia, energia insufficiente e silo pieni valgono anche offline. Una fabbrica mal progettata rende poco anche di notte — la competenza del giocatore conta sempre.
+3. **Tetto ai silo.** Senza questo l'offline genera risorse infinite e la parte fabbrica muore. Con questo, ampliare lo stoccaggio diventa una scelta idle sensata.
+
+E un costo reale: **le munizioni vengono consumate offline.** Difendersi mentre dormi non è gratis, e questo tiene la scelta centrale del gioco viva anche nello strato idle.
+
+---
+
+## 10. Procedura di ri-bilanciamento
 
 Da usare ogni volta che un playtest ti dice che qualcosa non va.
 
@@ -333,7 +399,7 @@ python3 tools/balance_sim.py --csv data/balance_reference.csv
 python3 tools/balance_sim.py > docs/BALANCE_REPORT.txt
 ```
 
-### Le 13 invarianti di design
+### Le 17 invarianti di design
 
 | # | Invariante | Protegge |
 |--:|---|---|
@@ -350,12 +416,17 @@ python3 tools/balance_sim.py > docs/BALANCE_REPORT.txt
 | 11 | Contro i corazzati la classifica si ribalta | due catene sempre attive |
 | 12 | Primo nodo di ricerca entro 60 s | l'aggancio iniziale |
 | 13 | I rapporti di linea sono numeri interi | leggibilità su schermo piccolo |
+| 14 | **I Dati da combattimento ≤ 25% del totale** | *"la logistica è il motore trainante"* |
+| 15 | Dopo 24 h offline il fronte si blocca | *"la base non viene distrutta in mia assenza"* |
+| 15b | **Lo stallo offline ≤ tetto difensivo online** | non rientri in una partita già persa |
+| 16 | Offline: più difesa = più avanzamento (monotono) | la difesa entra nello strato idle |
+| 17 | Difendersi resta profittevole fino all'ondata 50 | l'arco MVP non punisce chi combatte |
 
-Stato attuale: **13/13 soddisfatte.**
+Stato attuale: **17/17 soddisfatte.**
 
 ---
 
-## 10. Manopole di tuning, in ordine di pericolosità
+## 11. Manopole di tuning, in ordine di pericolosità
 
 | Costante | Valore | Se la tocchi |
 |---|--:|---|
@@ -364,6 +435,8 @@ Stato attuale: **13/13 soddisfatte.**
 | `beta_ammo` | 1,585 | ⚠️ Sposta il punto di pareggio difensivo. Più alto = gioco più permissivo. |
 | `wave_growth_p` | 1,55 | 🔶 Ripidità della pressione temporale. La manopola giusta se "è troppo facile/difficile nel tempo". |
 | `hp_base_b0` | 150 | 🟢 Difficoltà globale. **La prima manopola da usare** dopo un playtest. |
+| `offline_threat_uses_online_theta` | `true` | ☠️ **Se lo metti a `false`, l'idle avanza oltre il tuo tetto difensivo e rientri in una partita persa.** Non toccare. |
+| `kappa_combat_data` | 0,20 | 🔶 Quota dei Dati da combattimento, fissa a `κ/(1+κ)`. A 0,33 il combattimento arriva al 25%: è il tetto oltre il quale l'invariante 14 fallisce. |
 | `offline_efficiency` | 0,40 | 🟢 Sicura. Ritmo del ritorno. |
 | `corridor_tiles_reference` | 20 | 🟢 Sicura. Quanto premia la difesa in profondità. |
 

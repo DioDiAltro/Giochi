@@ -20,7 +20,9 @@ Un gioco che unisce la logistica su griglia e la difesa attiva di **Mindustry**,
 
 ## L'idea in un paragrafo
 
-Estrai minerale, lo raffini attraverso **quattro stadi** (triturazione → lavaggio con acqua → fusione → lega in multi-blocco), e poi affronti **una sola scelta, continuamente**: mandare il materiale raffinato al Core, che lo converte in **Dati** per l'albero della ricerca, oppure bruciarlo come **munizione** nelle torrette per sopravvivere all'ondata in arrivo. Le ondate scorrono di continuo mentre giochi; a gioco chiuso la base è invulnerabile e la fabbrica continua a produrre a rendimento ridotto.
+Estrai minerale, lo raffini attraverso **quattro stadi** (triturazione → lavaggio con acqua → fusione → lega in multi-blocco), e poi affronti **una sola scelta, continuamente**: mandare il materiale raffinato al Core, che lo converte in **Dati** per l'albero della ricerca, oppure bruciarlo come **munizione** nelle torrette per sopravvivere all'ondata in arrivo.
+
+Le ondate scorrono di continuo, **anche a gioco chiuso**. La base però non può essere distrutta: quando la difesa non ce la fa più il fronte si **blocca** su quell'ondata invece di cedere. Ne segue la regola che tiene insieme l'idle e la difesa: *l'idle ti porta esattamente al limite della tua difesa attuale, e non un'ondata oltre.*
 
 ## Come le tre meccaniche si incastrano matematicamente
 
@@ -39,7 +41,15 @@ La minaccia è ancorata al VI/s che **arriva al Core**, con esponente `0,80 < 1`
 - espandere la produzione è sempre net-positivo (`+14,9%` a ogni raddoppio);
 - bruciare materiale come munizione **abbassa** le ondate future — il sistema ha una retroazione negativa e non può entrare in spirale di morte.
 
-Derivazione completa: [`docs/TDD_01_Economia_Bilanciamento.md`](docs/TDD_01_Economia_Bilanciamento.md) §3.
+E la difesa non è solo un costo: le ondate avanzano anche offline, fino a bloccarsi al limite di ciò che le tue torrette reggono. Investire in difesa **compra avanzamento idle**.
+
+| Schieramento | Ondate guadagnate in 8 h offline |
+|---|--:|
+| 8 Cinetiche, munizione R3, balistica 5 | **15** → ondata 35 |
+| 8 Cin + 4 Frag, munizione R4, balistica 10 | **47** → ondata 67 |
+| 16 Cin + 8 Frag, munizione R4, balistica 20 | **116** → ondata 136 |
+
+Derivazione completa: [`docs/TDD_01_Economia_Bilanciamento.md`](docs/TDD_01_Economia_Bilanciamento.md) §3 e §9.
 
 ---
 
@@ -48,8 +58,8 @@ Derivazione completa: [`docs/TDD_01_Economia_Bilanciamento.md`](docs/TDD_01_Econ
 Nessun numero di questo progetto è stato inventato. Sono tutti verificati da:
 
 ```bash
-python3 tools/balance_sim.py            # 12 tabelle di bilanciamento
-python3 tools/balance_sim.py --check    # 13 invarianti di design (exit 1 se rotte)
+python3 tools/balance_sim.py            # 13 tabelle di bilanciamento
+python3 tools/balance_sim.py --check    # 17 invarianti di design (exit 1 se rotte)
 python3 tools/balance_sim.py --csv data/balance_reference.csv
 ```
 
@@ -63,15 +73,18 @@ Le **invarianti di design** sono il pezzo che protegge il progetto nel tempo. Es
 [OK]   Il ciclo scorie->energia si autoalimenta (1.00 prodotte vs 1.00 richieste)
 [OK]   Margine energetico <= 30% -> l'energia resta un problema da ingegnerizzare (0%)
 [OK]   Contro i corazzati la classifica si ribalta (R3 3.360 > R1 2.250)
+[OK]   I Dati da combattimento restano <=25% del totale a ogni ondata (max 16.7%)
+[OK]   Dopo 24h offline il fronte si blocca invece di correre (ondata 35, causa: dps)
+[OK]   Lo stallo offline non supera il tetto difensivo online (offline 35 <= online 35)
 ```
 
-Stato attuale: **13/13**. Se cambi un numero in `data/tuning.json` e un'invariante fallisce, hai rotto il concept — non un dettaglio.
+Stato attuale: **17/17**. Se cambi un numero in `data/tuning.json` e un'invariante fallisce, hai rotto il concept — non un dettaglio.
 
 ---
 
 ## Contenuto dell'MVP
 
-**2 minerali** (ferro, rame) + **1 fluido** (acqua) · **catena a 4 stadi** con sottoprodotto e ciclo energetico chiuso · **1 multi-blocco 2×2** con 3 input eterogenei · **2 torrette** con munizione a tier variabile · **3 archetipi nemici** · **12 nodi di ricerca** + 1 upgrade ripetibile · **idle offline** a 8 h con base invulnerabile · **abilità Overclock**.
+**2 minerali** (ferro, rame) + **1 fluido** (acqua) · **catena a 4 stadi** con sottoprodotto e ciclo energetico chiuso · **1 multi-blocco 2×2** con 3 input eterogenei · **2 torrette** con munizione a tier variabile · **3 archetipi nemici** · **12 nodi di ricerca** + 1 upgrade ripetibile · **idle offline** a 8 h con ondate risolte e base invulnerabile · **abilità Overclock**.
 
 La linea di riferimento — `4 Trivelle : 4 Trituratori : 4 Purificatori : 12 Fornaci : 2 Pompe` — produce **4,00 lingotti/s**, consuma **418 kW** su **420** disponibili, e genera **62,5 Dati/s**: ×31 rispetto a conferire minerale grezzo con le stesse trivelle.
 

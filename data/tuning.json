@@ -60,9 +60,23 @@
     "offline_cap_hours_base": 8.0,
     "offline_efficiency_upgraded": 0.55,
     "offline_cap_hours_upgraded": 12.0,
-    "wave_timer_frozen_offline": true,
+
+    "wave_timer_advances_offline": true,
     "base_invulnerable_offline": true,
+    "offline_stall_instead_of_defeat": true,
+    "_offline_model": "Il timer ondate AVANZA a gioco chiuso e le ondate vengono risolte una per una con lo snapshot difensivo. La base resta pero' INVULNERABILE: quando la difesa non basta piu' (DPS insufficiente o munizioni esaurite) il fronte si BLOCCA su quell'ondata e il timer si ferma. Il tempo residuo produce solo risorse e Dati.",
+
+    "offline_threat_uses_online_theta": true,
+    "_offline_threat_uses_online_theta": "CRITICO. La minaccia offline si calcola sul Theta dello snapshot di USCITA, non sul Theta ridotto dalla produzione offline. Altrimenti le ondate offline sarebbero piu' facili di quelle online e il giocatore rientrerebbe a un'ondata che la sua difesa non regge da sveglio. Con questa scelta il punto di stallo offline COINCIDE con il tetto difensivo online (verificato dall'invariante 15b).",
+
+    "offline_consumes_ammo": true,
     "clock_rollback_policy": "se now < last_exit -> dt = 0 e si registra un flag di sospetto"
+  },
+
+  "combat_reward": {
+    "kappa_combat_data": 0.20,
+    "_formula": "D_ondata = kappa * Theta * intervallo_ondata(n)",
+    "_note": "La ricompensa e' definita come FRAZIONE della produzione industriale nel tempo di un'ondata, NON come funzione degli HP nemici. Cosi' il combattimento vale una quota fissa (kappa/(1+kappa) = 16.7%) dei Dati totali a qualunque scala, e non puo' mai scalzare la logistica come motore trainante. Protetto dall'invariante 14."
   },
 
   "active_ability": {

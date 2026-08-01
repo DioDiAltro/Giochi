@@ -219,31 +219,78 @@ Lingotto di Ferro                12.50           50.00        5579   -12.3%
      livello 30:    2,438,565 Dati   (+180% danno)   cumulato      6,966,471
 
 ==============================================================================
- TABELLA 11 — PROGRESSIONE OFFLINE (Modalita' Sentinella)
+ TABELLA 11 — RICOMPENSA DA COMBATTIMENTO (Dati per ondata respinta)
+==============================================================================
+  D_ondata = kappa * Theta * intervallo(n),  kappa = 0.20
+  Definita come FRAZIONE dell'industria, non come funzione degli HP:
+  cosi' il combattimento vale sempre il 16.7%% del totale, a ogni scala,
+  e non puo' MAI diventare il motore trainante al posto della logistica.
+
+ Ondata  interv.   D industria   D combatt.   quota  mun. VI (R1)       netto
+----------------------------------------------------------------------------------
+      5     112s         7,031        1,406   16.7%            19      +1,387
+     10     105s         6,562        1,312   16.7%            36      +1,276
+     20      90s         5,625        1,125   16.7%            82      +1,043
+     30      75s         4,688          938   16.7%           139        +799
+     40      60s         3,750          750   16.7%           205        +545
+     50      45s         2,812          562   16.7%           281        +281
+     60      45s         2,812          562   16.7%           365        +197
+     70      45s         2,812          562   16.7%           456        +106
+
+  'netto' = Dati guadagnati meno il VI di munizioni bruciato.
+  Resta positivo per tutto l'arco MVP e diventa un costo reale oltre
+  l'ondata ~68: nel late game difendersi PESA, ed e' voluto.
+
+==============================================================================
+ TABELLA 12 — PROGRESSIONE OFFLINE (timer ondate ATTIVO)
 ==============================================================================
   Regole:
-    - a gioco chiuso la base e' INVULNERABILE e il timer ondate e' CONGELATO
-    - la produzione gira a eta_offline del regime, fino a un tetto orario
-    - l'accredito rispetta i colli di bottiglia (usa il throughput risolto)
+    - il timer ondate AVANZA a gioco chiuso e le ondate vengono risolte
+    - la base resta INVULNERABILE: se la difesa non basta il fronte si
+      BLOCCA su quell'ondata (la linea tiene ma non avanza)
+    - le munizioni VENGONO consumate: difendersi offline costa davvero
+    - la produzione gira a eta_offline, con tetto orario
 
-   Assenza     eta=0.40 cap 8h    eta=0.55 cap 12h    eta=0.55 cap 24h
-------------------------------------------------------------------------------
-      0.5h              45,000              61,875              61,875
-      1.0h              90,000             123,750             123,750
-      2.0h             180,000             247,500             247,500
-      4.0h             360,000             495,000             495,000
-      8.0h             720,000             990,000             990,000
-     12.0h             720,000           1,485,000           1,485,000
-     24.0h             720,000           1,485,000           2,970,000
-     48.0h             720,000           1,485,000           2,970,000
+  Assenza  ondate  ondata      stallo          Dati    mun. VI
+--------------------------------------------------------------------
+    0.25h      10      30           -        24,254      2,334
+    0.50h      15      35         dps        46,873      3,977
+    1.00h      15      35         dps        91,873      3,977
+    2.00h      15      35         dps       181,873      3,977
+    4.00h      15      35         dps       361,873      3,977
+    8.00h      15      35         dps       721,873      3,977
+   12.00h      15      35         dps       721,873      3,977
+   24.00h      15      35         dps       721,873      3,977
 
-  (valori in Dati. La colonna 1 e' il default MVP, la 2 dopo 'Uplink
-   Autonomo', la 3 dopo l'upgrade di tier successivo.)
+  Scenario: rientro dall'ondata 20 con 8 Cinetiche, munizione R3, balistica 5
+  (schieramento L3, che regge fino all'ondata 35).
+  --> il fronte si blocca da solo al limite naturale della difesa.
+      Non puoi rientrare e trovarti all'ondata 300.
 
-  Sessione attiva equivalente: 8h offline @0.40 = 3.2h di gioco attivo.
+  CONFRONTO SCHIERAMENTI (8 h di assenza, partendo dall'ondata 20):
+    Schieramento                                    ondate  arriva a      stallo
+----------------------------------------------------------------------------------
+    L1  4 Cinetiche  / mun. R1 / balistica  0            0        20         dps
+    L2  4 Cinetiche  / mun. R3 / balistica  0            0        20         dps
+    L3  8 Cinetiche  / mun. R3 / balistica  5           15        35         dps
+    L4  8 Cin + 4 Frag / mun. R4 / balistica 10         47        67         dps
+    L5 16 Cin + 8 Frag / mun. R4 / balistica 20        116       136         dps
+
+  --> la progressione idle delle ondate e' LIMITATA DALLA DIFESA.
+      Costruire torrette sblocca avanzamento offline: e' il collegamento
+      che mancava fra il terzo genere (difesa) e lo strato incrementale.
+
+  DATI TOTALI ACCUMULATI (industria + combattimento - munizioni):
+  Assenza     eta=0.40 cap 8h    eta=0.55 cap 12h
+--------------------------------------------------
+     0.5h              46,873              65,942
+     2.0h             181,873             251,567
+     8.0h             721,873             994,067
+    12.0h             721,873           1,489,067
+    24.0h             721,873           1,489,067
 
 ==============================================================================
- TABELLA 12 — BUDGET PRESTAZIONALE MOBILE (target: 60 fps su A12 / Snapdragon 730)
+ TABELLA 13 — BUDGET PRESTAZIONALE MOBILE (target: 60 fps su A12 / Snapdragon 730)
 ==============================================================================
 Voce                        Budget          Nota
 ------------------------------------------------------------------------------
@@ -272,5 +319,10 @@ Save                        1 / 30 s        binario, su thread, < 8 ms
   [OK]   Contro i corazzati la classifica si ribalta (R3 3.360 > R1 2.250)
   [OK]   Primo nodo di ricerca raggiungibile in <=60s (24s)
   [OK]   I rapporti di linea sono numeri interi (Fornaci = 12.0000)
+  [OK]   I Dati da combattimento restano <=25% del totale a ogni ondata (max 16.7%)
+  [OK]   Dopo 24h offline il fronte si blocca invece di correre (ondata 35, causa: dps)
+  [OK]   Lo stallo offline non supera il tetto difensivo online (offline 35 <= online 35)
+  [OK]   Offline: uno schieramento migliore avanza sempre di piu' (monotonia)
+  [OK]   Difendersi resta profittevole fino all'ondata 50 (netto +281 Dati)
 
   Tutte le invarianti di design sono soddisfatte.

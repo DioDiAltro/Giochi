@@ -39,6 +39,21 @@
     "_note": "Aggiungere un lato di spawn e' il modo migliore per alzare la difficolta' senza gonfiare gli HP: costringe a ri-progettare la base invece di aggiungere torrette allo stesso muro."
   },
 
+  "reward": {
+    "formula": "data = kappa_combat_data * theta * wave_interval(n)",
+    "kappa": 0.20,
+    "quota_dati_totali": "16.7%",
+    "_note": "Respingere un'ondata da' Dati. Necessario perche' il timer avanza anche offline: senza ricompensa, l'avanzamento delle ondate sarebbe solo una punizione per essersi assentati. Il netto (Dati - VI munizioni) resta positivo fino all'ondata ~68."
+  },
+
+  "offline": {
+    "timer_advances": true,
+    "resolution": "ondata per ondata, con lo snapshot difensivo salvato all'uscita",
+    "threat_uses_online_theta": true,
+    "on_insufficient_defense": "STALLO — il fronte si blocca su quell'ondata, la base non viene mai distrutta",
+    "consumes_ammo": true
+  },
+
   "milestones": {
     "_comment": "Ondate in cui la curva DEVE mettere in crisi lo schieramento corrente (verificato da tools/balance_sim.py).",
     "5":  "L1 (4 Cinetiche, munizione R1) smette di bastare -> il giocatore DEVE raffinare fino a R3",

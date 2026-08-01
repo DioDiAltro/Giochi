@@ -60,7 +60,19 @@ Percorso: `user://save_slot_0.dat` · Backup rotativo: `user://save_slot_0.bak` 
     "data_lifetime": 190442.1,
     "theta_rolling": 62.5,              // media mobile 60 s, riseminata al caricamento
     "wave_index": 23,
-    "wave_timer_s": 41.2,               // congelato a gioco chiuso
+    "wave_timer_s": 41.2,               // il timer AVANZA anche a gioco chiuso
+
+    // Snapshot difensivo: serve all'OfflineSolver per risolvere le ondate
+    // mentre l'app è chiusa. Salvato all'uscita, mai ricalcolato dall'offline.
+    "defense_snapshot": {
+      "dps_vs_swarm": 1360.0,
+      "dps_vs_flyer": 1272.0,
+      "dps_vs_armored": 832.0,
+      "damage_per_ammo": 450.0,
+      "ammo_material": "ingot_iron",
+      "ammo_in_turrets": 148.0,
+      "ammo_supply_rate": 1.6
+    },
     "research_unlocked": ["log_belts_1", "mine_drills_1", "proc_washing"],
     "research_levels": { "def_ballistics": 7 },
     "ability_cooldowns": { "overclock": 312.0 }
@@ -104,7 +116,11 @@ func load_save(path: String) -> Dictionary:
 Reti elettriche, flow field, grafo di produzione e indice spaziale dei nemici vengono **ricostruiti** al caricamento. Salvarli significa avere due fonti di verità che prima o poi divergono. Costo di ricostruzione misurato: < 60 ms su un mid-range.
 
 **4. I nemici vivi non si salvano.**
-A gioco chiuso non esistono (Modalità Sentinella). Al caricamento il campo di battaglia è vuoto e il timer dell'ondata riparte dal valore congelato. Semplifica lo schema e rende impossibile il salvataggio in stato di battaglia incoerente.
+A gioco chiuso i nemici non esistono come entità: le ondate offline sono **risolte analiticamente** dall'`OfflineSolver` a partire da `defense_snapshot`, non simulate unità per unità. Al caricamento il campo di battaglia è vuoto e il timer riparte dal valore aggiornato dal solver.
+
+Questo è anche il motivo per cui `defense_snapshot` **deve** essere salvato invece di essere ricalcolato al caricamento: al rientro la fabbrica potrebbe essere cambiata (silo pieni, energia diversa), e useresti una difesa che non era quella in campo durante l'assenza.
+
+Conseguenza pratica: è impossibile salvare in uno stato di battaglia incoerente, e l'intero calcolo offline costa meno di un millisecondo (un ciclo `while` su qualche decina di iterazioni).
 
 **5. Backup prima della sovrascrittura.**
 `save_slot_0.dat` → `save_slot_0.bak` → scrittura. Se il caricamento del principale fallisce, si tenta il backup e si avvisa l'utente. Un crash durante una scrittura di 8 ms è raro ma su mobile succede (l'OS può terminare il processo in qualsiasi momento).

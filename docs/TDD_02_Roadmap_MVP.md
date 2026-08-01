@@ -118,12 +118,22 @@ Grafica, effetti, audio, menu: tutto dopo. Un prototipo brutto che dimostra il l
 - [ ] `ProductionGraph.resolve()`: Kahn + 3 passate per i cicli di retroazione
 - [ ] `SaveManager`: binario su `WorkerThreadPool`, autosave 30 s, **`version` + catena di migrazioni dal giorno uno**
 - [ ] `OfflineSolver`: throughput risolto × `t` × `η`, **limitato dalla capacità dei silo**
-- [ ] Modalità Sentinella: base invulnerabile, timer ondate congelato
+- [ ] **Fronte Autonomo**: il timer ondate avanza offline, le ondate si risolvono una per una
+- [ ] `defense_snapshot()` salvato all'uscita: DPS per archetipo + danno per munizione
+- [ ] **Stallo invece di sconfitta**: quando la difesa non regge, il fronte si blocca e la base resta intatta
+- [ ] Minaccia offline calcolata sul **`Θ` online**, non su `Θ × η` (vedi TDD 00 §11, riquadro)
+- [ ] Consumo reale delle munizioni offline
+- [ ] Ricompensa per ondata respinta: `D = 0,20 · Θ · intervallo(n)`
 - [ ] Controllo di integrità del tempo (`dt < 0 → 0`)
-- [ ] Popup di rientro stile Upload Lab, con avviso onesto se si è raggiunto il tetto
+- [ ] Popup di rientro stile Upload Lab: **4 punti obbligatori** (tempo, ondate respinte, munizioni consumate, causa dello stallo)
 - [ ] Abilità **Overclock** (×2,5 / 45 s / CD 10 min / +25% domanda energetica)
 
-**Fatto quando:** chiudi l'app con `Θ = 62,5`, aspetti 30 minuti reali, riapri e trovi **~45 000 Dati** — il valore della Tabella 11. E se i silo erano pieni, ne trovi meno, e il popup te lo dice.
+**Fatto quando:** chiudi l'app all'ondata 20 con lo schieramento L3 (8 Cinetiche, munizione R3, balistica 5), aspetti 30 minuti reali, riapri e trovi:
+- **15 ondate respinte**, sei all'**ondata 35**, con causa dello stallo `dps`;
+- **~46 900 Dati** e **~3 980 VI di munizioni consumate** — i valori della Tabella 12;
+- e l'ondata 35 è **esattamente** il tetto che quello schieramento regge anche online.
+
+L'ultimo punto è il criterio critico: se offline avanzi oltre il tuo tetto online, hai sbagliato la riga del `Θ` e il giocatore rientrerà in una partita già persa.
 
 ---
 

@@ -25,7 +25,7 @@ Giochi/
 │   ├── research.json    albero di ricerca a 12 nodi
 │   └── waves.json       nemici e direttore delle ondate
 └── tools/
-    └── balance_sim.py   simulatore + 13 invarianti di design
+    └── balance_sim.py   simulatore + 17 invarianti di design
 ```
 
 **Regola operativa numero uno:** nessun numero di bilanciamento viene scritto a mano in GDScript.
@@ -35,7 +35,7 @@ Tutto viene caricato da `res://data/*.json`. Se cambi un numero, lo cambi lì, p
 python3 tools/balance_sim.py --check
 ```
 
-Se una delle 13 invarianti fallisce, hai rotto il gioco senza accorgertene. Il comando esce con codice 1.
+Se una delle 17 invarianti fallisce, hai rotto il gioco senza accorgertene. Il comando esce con codice 1.
 
 ---
 
@@ -67,10 +67,13 @@ graph LR
     I -.abbatte.-> W[Ondate]
     H -->|Theta = VI/s al Core| W
     W -.minaccia.-> I
+    W -->|ondata respinta<br/>+20% dell'industria| H
+    W -->|avanzamento anche offline<br/>fino al limite della difesa| IDLE[Progressione idle]
 
     style SINK1 fill:#8B0000,color:#fff
     style H fill:#1a4d7a,color:#fff
     style I fill:#7a4d1a,color:#fff
+    style IDLE fill:#2d5a3d,color:#fff
 ```
 
 Leggi il diagramma partendo dal rombo rosso. **Quel rombo è il gioco.** Tutto il resto è infrastruttura che rende quella scelta interessante.
@@ -82,6 +85,7 @@ Le tre proprietà che tengono insieme il sistema — dimostrate numericamente ne
 | **P1** | I Dati crescono come `2.5^R`, il danno delle munizioni solo come `(R+1)^1.585` | Salire di tier arricchisce molto più di quanto potenzi. Non puoi "techare" per vincere: devi **costruire più fabbrica**. Questa è la regola *"mai un tower defense statico"* resa matematica. |
 | **P2** | La minaccia è ancorata a `Θ` = VI/s che **arriva al Core**, con esponente `0.80 < 1` | Espandere la produzione è sempre net-positivo (raddoppi la produzione, la minaccia cresce solo di `2^0.8 = 1.74×`). E bruciare materiale come munizione **abbassa** `Θ`, quindi abbassa le ondate future: il sistema ha una retroazione negativa e non può divergere. |
 | **P3** | L'armatura dei nemici è una **riduzione piatta** | La munizione di tier basso è la più efficiente *per VI speso* contro i bersagli nudi, ma diventa inutile contro i corazzati. Ti obbliga a mantenere **due catene di raffinazione attive contemporaneamente**. |
+| **P4** | Le ondate avanzano anche offline, ma si **bloccano** al limite della difesa | Le torrette smettono di essere un puro costo: determinano quanto lontano arrivi mentre non giochi. È il ponte fra la difesa e lo strato incrementale (§11). |
 
 ---
 
@@ -519,44 +523,113 @@ L'interfaccia del Laboratorio è un `Control` a scorrimento con pinch-zoom che d
 
 ---
 
-## 11. Progressione offline — la Modalità Sentinella
+## 11. Progressione offline — il Fronte Autonomo
 
-Il conflitto: onde a ciclo continuo (la tua scelta) contro idle sicuro (il tuo vincolo). Si risolve così:
+Il conflitto da risolvere: ondate a ciclo continuo **con il timer che avanza anche a gioco chiuso**, contro il vincolo "la base non deve mai essere distrutta in mia assenza".
+
+La soluzione non è congelare né lasciar correre. È **risolvere le ondate offline una per una, e bloccare il fronte quando la difesa non ce la fa più**:
 
 | Cosa | A gioco chiuso |
 |---|---|
-| Base e Core | **Invulnerabili.** Nessun nemico esiste. |
-| Timer ondate | **Congelato.** Rientri all'ondata N esatta da cui eri uscito. |
-| Produzione | Gira al `η_offline` del regime a cui girava (40%, 55% dopo *Uplink Autonomo*). |
-| Munizioni | **Non consumate** (nessuno spara). |
+| Timer ondate | **Avanza.** Le ondate arrivano e vengono risolte in sequenza. |
+| Base e Core | **Invulnerabili.** Non possono essere distrutti, mai. |
+| Se la difesa regge | L'ondata è respinta: consuma munizioni, dà Dati, il contatore avanza. |
+| Se la difesa **non** regge | **STALLO.** Il fronte si blocca su quell'ondata, il timer si ferma lì. La linea tiene ma non guadagna terreno. |
+| Munizioni | **Consumate davvero.** Difendersi offline ha un costo reale in VI. |
+| Produzione | Gira al `η_offline` del regime (40%, 55% dopo *Uplink Autonomo*). |
 | Tetto | 8 h (12 h dopo *Uplink Autonomo*). |
+
+### Il risolutore
 
 ```gdscript
 # sim/offline_solver.gd
 func resolve(dt_seconds: float) -> Dictionary:
     var cap := Research.offline_cap_hours * 3600.0
-    var t := clampf(dt_seconds, 0.0, cap)
+    var t_left := clampf(dt_seconds, 0.0, cap)
     var eta := Research.offline_efficiency
+    var solved := world.production_graph.steady_state()   # stesso codice dell'online
 
-    # NON si moltiplica semplicemente la produzione per il tempo: si usa il
-    # throughput risolto dal grafo topologico, così i colli di bottiglia,
-    # i limiti dei silo e la carenza di energia valgono anche offline.
-    var solved := world.production_graph.steady_state()
-    var report := {}
-    for mat_id in solved.rates:
-        var produced: float = solved.rates[mat_id] * t * eta
-        var space: float = world.storage_space_for(mat_id)
-        report[mat_id] = minf(produced, space)     # i silo pieni fermano la linea
-        world.add_material(mat_id, report[mat_id])
-    report["data"] = solved.data_rate * t * eta
-    world.data += report["data"]
-    report["capped"] = dt_seconds > cap
-    return report
+    var n: int = world.wave_index
+    var theta_online: float = world.theta_rolling         # snapshot all'uscita
+    var snap := world.defense_snapshot()                  # dps per archetipo, danno/munizione
+    var cleared := 0
+    var stall := ""
+    var ammo_bank := world.ammo_in_turrets()
+
+    while t_left > 0.0:
+        var dt_wave := Waves.interval(n)
+        if t_left < dt_wave:
+            world.wave_timer_s = dt_wave - t_left         # avanzamento parziale del timer
+            break
+        ammo_bank += solved.ammo_rate * dt_wave * eta
+        var m := n + 1
+
+        # ⚠️ theta_online, NON theta * eta. Vedi il riquadro qui sotto.
+        var hp := Waves.hp_budget(m, theta_online)
+
+        if snap.dps_vs_wave(m) < hp / Waves.engagement_window(m):
+            stall = "dps";  break
+        var need := hp / snap.damage_per_ammo
+        if ammo_bank < need:
+            stall = "ammo"; break
+
+        ammo_bank -= need
+        world.data += Waves.KAPPA * (solved.data_rate * eta) * dt_wave   # ricompensa
+        n = m
+        cleared += 1
+        t_left -= dt_wave
+
+    world.wave_index = n
+    # Il tempo TOTALE (anche quello dopo lo stallo) produce comunque risorse e Dati,
+    # limitati dalla capacità dei silo.
+    ...
 ```
+
+> ### La riga da non sbagliare
+> `hp_budget(m, theta_online)` — **non** `theta_online * eta`.
+>
+> Se la minaccia offline si calcolasse sul `Θ` ridotto dalla produzione idle, le ondate offline sarebbero *più facili* di quelle online. Il giocatore avanzerebbe fino all'ondata 49 dormendo, e al risveglio — con `Θ` tornato pieno — si troverebbe davanti un'ondata che la sua difesa non regge da sveglio. Idle "sicuro" solo sulla carta.
+>
+> Usando il `Θ` online, il **punto di stallo offline coincide esattamente con il tetto difensivo online**. Verificato dall'invariante 15b: schieramento L3 → stallo offline all'ondata 35, tetto online all'ondata 35.
+>
+> Questo dà anche la regola comunicabile al giocatore in una frase: **"l'idle ti porta esattamente al limite della tua difesa attuale, e non un'ondata oltre."**
+
+### Perché respingere un'ondata deve dare Dati
+
+Con il timer che avanza offline, senza una ricompensa l'avanzamento delle ondate sarebbe **solo una punizione per essersi assentati**: torneresti a difficoltà più alta e a parità di ricchezza. Quindi ogni ondata respinta vale:
+
+$$D_{\text{ondata}} = \kappa \cdot \Theta \cdot \text{intervallo}(n), \qquad \kappa = 0{,}20$$
+
+La ricompensa è deliberatamente espressa come **frazione di ciò che l'industria produce nel tempo di un'ondata**, non come funzione degli HP nemici. Conseguenza: il combattimento vale **sempre il 16,7% dei Dati totali**, a qualunque scala e a qualunque ondata. Non può scalzare la logistica come motore trainante nemmeno all'ondata 120 — è vero per costruzione, non per taratura. (Invariante 14.)
+
+### Silo e capacità
 
 **Il tetto ai silo non è un dettaglio:** senza di esso l'offline produce risorse infinite e la parte "fabbrica" del gioco muore. Con esso, ampliare lo stoccaggio diventa una scelta di progressione idle sensata — ed è il motivo per cui il Silo è nell'MVP.
 
-Al rientro, un `offline_report.tscn` mostra il riepilogo in stile Upload Lab: tempo trascorso, materiali accumulati, Dati guadagnati, e — se `capped` è vero — un avviso onesto *"produzione ferma da 3 h 20 m: il tetto è di 8 h"*.
+### Il popup di rientro
+
+`offline_report.tscn`, stile Upload Lab, deve dire **quattro cose** e in quest'ordine:
+
+1. *"Assente per 6 h 12 m"* — e se si è raggiunto il tetto: *"produzione ferma da 4 h 12 m (tetto: 8 h)"*.
+2. *"**15 ondate respinte** — sei all'ondata 35"* con i materiali e i Dati guadagnati.
+3. *"**Munizioni consumate:** 412 Lingotti di Ferro"* — il costo, mostrato con la stessa evidenza del guadagno.
+4. Se c'è stato stallo: *"**Il fronte si è bloccato all'ondata 35:** la tua difesa non basta oltre. Potenziala per avanzare anche offline."*
+
+Il punto 4 è il più importante del popup: trasforma un limite in un obiettivo, e comunica al giocatore la regola del sistema senza un tutorial.
+
+### Conseguenza sistemica
+
+Questo modello aggiunge la freccia che nel diagramma del §1 mancava: **la difesa ora alimenta la progressione idle.** Prima le torrette erano un puro costo; ora determinano quanto lontano puoi arrivare mentre non giochi.
+
+| Schieramento | Ondate guadagnate in 8 h offline (partendo dalla 20) |
+|---|--:|
+| L1 · 4 Cinetiche, mun. R1 | **0** (già oltre il proprio limite) |
+| L2 · 4 Cinetiche, mun. R3 | **0** |
+| L3 · 8 Cinetiche, mun. R3, balistica 5 | **15** → ondata 35 |
+| L4 · 8 Cin + 4 Frag, mun. R4, balistica 10 | **47** → ondata 67 |
+| L5 · 16 Cin + 8 Frag, mun. R4, balistica 20 | **116** → ondata 136 |
+
+Progressione monotona e verificata (invariante 16): investire in difesa **compra letteralmente avanzamento idle**.
 
 ### Integrità del tempo
 

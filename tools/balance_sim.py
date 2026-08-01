@@ -42,6 +42,15 @@ SLOTS_PER_TILE = 3  # slot logici per cella di nastro
 OFFLINE_ETA_BASE = 0.40   # rendimento produzione a gioco chiuso
 OFFLINE_CAP_H_BASE = 8.0  # tetto ore accreditate
 
+# Il timer delle ondate AVANZA anche a gioco chiuso. La base resta pero'
+# invulnerabile: quando la difesa non ce la fa piu', il fronte si BLOCCA
+# (la linea tiene ma non avanza) invece di essere sfondato.
+OFFLINE_WAVES_ADVANCE = True
+KAPPA_COMBAT_DATA = 0.20  # ricompensa in Dati per ondata respinta, espressa come
+                          # frazione di cio' che la fabbrica produce in un intervallo
+                          # d'ondata. Auto-scalante: non puo' MAI superare l'industria.
+FRAG_AVG_TARGETS = 3.0    # bersagli medi colpiti dall'AoE (max 5, media prudenziale)
+
 # =============================================================================
 # SEZIONE 1 — MATERIALI E VALORE INDUSTRIALE (VI)
 # =============================================================================
@@ -172,8 +181,8 @@ def wave_mix(n):
 
 
 def wave_interval(n):
-    """Secondi tra un'ondata e la successiva. Il ciclo e' CONTINUO in sessione,
-    congelato a gioco chiuso (Modalita' Sentinella)."""
+    """Secondi tra un'ondata e la successiva. Il ciclo e' CONTINUO, sia in
+    sessione sia a gioco chiuso (vedi simulate_offline)."""
     return max(45.0, 120.0 - 1.5 * n)
 
 
@@ -224,6 +233,110 @@ def engagement_window(n):
     mix = wave_mix(n)
     avg_speed = sum(mix[e] * ENEMIES[e][E_SPEED] for e in mix)
     return CORRIDOR_TILES / avg_speed
+
+
+def damage_per_ammo(turret_counts, ammo_tier, ballistics_levels=0):
+    """Danno totale erogato da UNA unita' di munizione, mediato sullo schieramento.
+    Serve per sapere quante munizioni costa respingere un'ondata da X HP."""
+    mult = ammo_mult(ammo_tier) * (1.0 + 0.06 * ballistics_levels)
+    tot_dmg = 0.0
+    tot_ammo = 0.0
+    for tid, count in turret_counts.items():
+        t = TURRETS[tid]
+        shots_per_ammo = 1.0 / t[T_AMMO]
+        aoe = FRAG_AVG_TARGETS if tid == "frag" else 1.0
+        dmg = t[T_DMG] * mult * shots_per_ammo * aoe
+        # peso = munizioni/s consumate da questo tipo di torretta
+        w = count * t[T_AMMO] * t[T_RATE]
+        tot_dmg += dmg * w
+        tot_ammo += w
+    return tot_dmg / tot_ammo if tot_ammo > 0 else 0.0
+
+
+def combat_data_reward(theta, n):
+    """Dati guadagnati respingendo l'ondata n.
+
+    Definita come FRAZIONE della produzione industriale nel tempo di un'ondata,
+    non come funzione degli HP nemici. E' la formulazione che rende impossibile
+    per definizione che il combattimento superi la logistica come fonte di Dati:
+    il rapporto e' fisso a kappa/(1+kappa) = 16.7% del totale a qualunque scala.
+    """
+    return KAPPA_COMBAT_DATA * theta * wave_interval(n)
+
+
+def ammo_vi_cost_per_wave(turret_counts, ammo_tier, ballistics_levels, n, theta):
+    """VI di munizioni bruciato per respingere l'ondata n."""
+    hp = hp_budget(n, theta)
+    dpa = damage_per_ammo(turret_counts, ammo_tier, ballistics_levels)
+    ammo_units = hp / dpa
+    examples = {0: "ore_iron", 1: "dust_iron", 2: "pdust_iron", 3: "ingot_iron", 4: "alloy_cond"}
+    return ammo_units * vi(examples[ammo_tier]), ammo_units
+
+
+def simulate_offline(dt_seconds, wave_index, turret_counts, ammo_tier,
+                     ballistics_levels, theta, eta=OFFLINE_ETA_BASE,
+                     cap_h=OFFLINE_CAP_H_BASE, ammo_supply_rate=None):
+    """Risolve una sessione offline con il timer ondate ATTIVO.
+
+    Regola invalicabile: la base non puo' essere distrutta. Quando la difesa
+    non basta piu' (DPS insufficiente o munizioni esaurite) il fronte si BLOCCA
+    e il timer si ferma su quell'ondata. Il tempo residuo produce solo risorse.
+    """
+    t_left = min(dt_seconds, cap_h * 3600.0)
+    t_total = t_left
+    n = wave_index
+    cleared = 0
+    data = 0.0
+    ammo_spent_vi = 0.0
+    stall = None
+    theta_off = theta * eta
+    if ammo_supply_rate is None:
+        # per default le torrette sono alimentate dalla linea principale
+        ammo_supply_rate = ammo_drain(turret_counts, duty_cycle=1.0)
+    ammo_bank = 0.0
+
+    while t_left > 0:
+        dt_wave = wave_interval(n)
+        if t_left < dt_wave:
+            break
+        # produzione durante l'intervallo
+        ammo_bank += ammo_supply_rate * dt_wave * eta
+        n_next = n + 1
+        # ATTENZIONE: la minaccia offline si calcola sul Theta ONLINE (quello
+        # dello snapshot di uscita), NON su theta_off. Se usassimo il Theta
+        # ridotto, le ondate offline sarebbero piu' facili di quelle online e il
+        # giocatore rientrerebbe a un'ondata che la sua difesa non regge da
+        # sveglio: idle "sicuro" solo sulla carta. Con questa scelta il punto di
+        # stallo offline COINCIDE con il tetto difensivo online.
+        hp = hp_budget(n_next, theta)
+        need_dps = hp / engagement_window(n_next)
+        have_dps = wave_dps(turret_counts, ammo_tier, n_next, ballistics_levels)
+        if have_dps < need_dps:
+            stall = "dps"
+            break
+        need_ammo = hp / damage_per_ammo(turret_counts, ammo_tier, ballistics_levels)
+        if ammo_bank < need_ammo:
+            stall = "munizioni"
+            break
+        ammo_bank -= need_ammo
+        examples = {0: "ore_iron", 1: "dust_iron", 2: "pdust_iron", 3: "ingot_iron", 4: "alloy_cond"}
+        ammo_spent_vi += need_ammo * vi(examples[ammo_tier])
+        data += combat_data_reward(theta_off, n_next)
+        n = n_next
+        cleared += 1
+        t_left -= dt_wave
+
+    # tutto il tempo (anche quello dopo lo stallo) produce Dati industriali,
+    # al netto del VI bruciato in munizioni
+    data += theta_off * t_total - ammo_spent_vi
+    return {
+        "waves_cleared": cleared,
+        "wave_final": n,
+        "stall": stall,
+        "data": data,
+        "ammo_vi": ammo_spent_vi,
+        "capped": dt_seconds > cap_h * 3600.0,
+    }
 
 
 def ammo_drain(turret_counts, duty_cycle=0.40):
@@ -543,26 +656,71 @@ def t_research(theta_base):
         print(f"     livello {L:>2}: {repeatable_cost(300, 1.35, L):>12,.0f} Dati   (+{6*L}% danno)   cumulato {cumulative_cost(300,1.35,L):>14,.0f}")
 
 
+def t_combat_reward(theta_base):
+    hr("TABELLA 11 — RICOMPENSA DA COMBATTIMENTO (Dati per ondata respinta)")
+    print("  D_ondata = kappa * Theta * intervallo(n),  kappa = %.2f" % KAPPA_COMBAT_DATA)
+    print("  Definita come FRAZIONE dell'industria, non come funzione degli HP:")
+    print("  cosi' il combattimento vale sempre il 16.7%% del totale, a ogni scala,")
+    print("  e non puo' MAI diventare il motore trainante al posto della logistica.\n")
+    print(f"{'Ondata':>7}{'interv.':>9}{'D industria':>14}{'D combatt.':>13}{'quota':>8}"
+          f"{'mun. VI (R1)':>14}{'netto':>12}")
+    print("-" * 82)
+    tc, at, bl = {"kinetic": 8}, 1, 5
+    for n in [5, 10, 20, 30, 40, 50, 60, 70]:
+        iv = wave_interval(n)
+        d_ind = theta_base * iv
+        d_cmb = combat_data_reward(theta_base, n)
+        cost, _units = ammo_vi_cost_per_wave(tc, at, bl, n, theta_base)
+        print(f"{n:>7}{iv:>8.0f}s{d_ind:>14,.0f}{d_cmb:>13,.0f}"
+              f"{d_cmb/(d_ind+d_cmb)*100:>7.1f}%{cost:>14,.0f}{d_cmb-cost:>+12,.0f}")
+    print("\n  'netto' = Dati guadagnati meno il VI di munizioni bruciato.")
+    print("  Resta positivo per tutto l'arco MVP e diventa un costo reale oltre")
+    print("  l'ondata ~68: nel late game difendersi PESA, ed e' voluto.")
+
+
 def t_offline(theta_base):
-    hr("TABELLA 11 — PROGRESSIONE OFFLINE (Modalita' Sentinella)")
+    hr("TABELLA 12 — PROGRESSIONE OFFLINE (timer ondate ATTIVO)")
     print("  Regole:")
-    print("    - a gioco chiuso la base e' INVULNERABILE e il timer ondate e' CONGELATO")
-    print("    - la produzione gira a eta_offline del regime, fino a un tetto orario")
-    print("    - l'accredito rispetta i colli di bottiglia (usa il throughput risolto)\n")
-    print(f"{'Assenza':>10}{'eta=0.40 cap 8h':>20}{'eta=0.55 cap 12h':>20}{'eta=0.55 cap 24h':>20}")
-    print("-" * 78)
-    for h in [0.5, 1, 2, 4, 8, 12, 24, 48]:
-        a = min(h, 8.0) * 3600 * theta_base * 0.40
-        b = min(h, 12.0) * 3600 * theta_base * 0.55
-        c = min(h, 24.0) * 3600 * theta_base * 0.55
-        print(f"{h:>9.1f}h{a:>20,.0f}{b:>20,.0f}{c:>20,.0f}")
-    print("\n  (valori in Dati. La colonna 1 e' il default MVP, la 2 dopo 'Uplink")
-    print("   Autonomo', la 3 dopo l'upgrade di tier successivo.)")
-    print(f"\n  Sessione attiva equivalente: 8h offline @0.40 = {8*0.40:.1f}h di gioco attivo.")
+    print("    - il timer ondate AVANZA a gioco chiuso e le ondate vengono risolte")
+    print("    - la base resta INVULNERABILE: se la difesa non basta il fronte si")
+    print("      BLOCCA su quell'ondata (la linea tiene ma non avanza)")
+    print("    - le munizioni VENGONO consumate: difendersi offline costa davvero")
+    print("    - la produzione gira a eta_offline, con tetto orario\n")
+
+    print(f"{'Assenza':>9}{'ondate':>8}{'ondata':>8}{'stallo':>12}{'Dati':>14}{'mun. VI':>11}")
+    print("-" * 68)
+    for h in [0.25, 0.5, 1, 2, 4, 8, 12, 24]:
+        r = simulate_offline(h * 3600, 20, {"kinetic": 8}, 3, 5, theta_base)
+        print(f"{h:>8.2f}h{r['waves_cleared']:>8}{r['wave_final']:>8}"
+              f"{(r['stall'] or '-'):>12}{r['data']:>14,.0f}{r['ammo_vi']:>11,.0f}")
+
+    print("\n  Scenario: rientro dall'ondata 20 con 8 Cinetiche, munizione R3, balistica 5")
+    print("  (schieramento L3, che regge fino all'ondata 35).")
+    print("  --> il fronte si blocca da solo al limite naturale della difesa.")
+    print("      Non puoi rientrare e trovarti all'ondata 300.")
+
+    print("\n  CONFRONTO SCHIERAMENTI (8 h di assenza, partendo dall'ondata 20):")
+    print(f"{'':>4}{'Schieramento':<46}{'ondate':>8}{'arriva a':>10}{'stallo':>12}")
+    print("-" * 82)
+    for name, tc, at, bl in LOADOUTS:
+        r = simulate_offline(8 * 3600, 20, tc, at, bl, theta_base)
+        print(f"{'':>4}{name:<46}{r['waves_cleared']:>8}{r['wave_final']:>10}"
+              f"{(r['stall'] or '-'):>12}")
+    print("\n  --> la progressione idle delle ondate e' LIMITATA DALLA DIFESA.")
+    print("      Costruire torrette sblocca avanzamento offline: e' il collegamento")
+    print("      che mancava fra il terzo genere (difesa) e lo strato incrementale.")
+
+    print("\n  DATI TOTALI ACCUMULATI (industria + combattimento - munizioni):")
+    print(f"{'Assenza':>9}{'eta=0.40 cap 8h':>20}{'eta=0.55 cap 12h':>20}")
+    print("-" * 50)
+    for h in [0.5, 2, 8, 12, 24]:
+        a = simulate_offline(h*3600, 20, {"kinetic": 8}, 3, 5, theta_base, 0.40, 8.0)
+        b = simulate_offline(h*3600, 20, {"kinetic": 8}, 3, 5, theta_base, 0.55, 12.0)
+        print(f"{h:>8.1f}h{a['data']:>20,.0f}{b['data']:>20,.0f}")
 
 
 def t_perf():
-    hr("TABELLA 12 — BUDGET PRESTAZIONALE MOBILE (target: 60 fps su A12 / Snapdragon 730)")
+    hr("TABELLA 13 — BUDGET PRESTAZIONALE MOBILE (target: 60 fps su A12 / Snapdragon 730)")
     rows = [
         ("Tick logico",              f"{TICK_HZ} Hz", "5.0 ms/tick max = 10% CPU"),
         ("Edifici simulati",         "<= 2 000",      "aggiornati solo se 'attivi' (dirty set)"),
@@ -664,6 +822,49 @@ def check_invariants(verbose=True):
               * machine_rate("wash_iron", "pdust_iron") / machine_rate("smelt_iron", "pdust_iron", "in")
     req(abs(n_smelt - round(n_smelt)) < 1e-9,
         "I rapporti di linea sono numeri interi (Fornaci = %.4f)" % n_smelt)
+
+    # 14. Il combattimento non deve MAI diventare la fonte primaria di Dati.
+    #     (protegge "la logistica e la generazione di Dati sono il motore trainante")
+    theta_r = 4.0 * vi("ingot_iron")
+    worst_share = 0.0
+    for n in range(1, 121):
+        d_ind = theta_r * wave_interval(n)
+        d_cmb = combat_data_reward(theta_r, n)
+        worst_share = max(worst_share, d_cmb / (d_ind + d_cmb))
+    req(worst_share <= 0.25,
+        "I Dati da combattimento restano <=25%% del totale a ogni ondata (max %.1f%%)" % (worst_share * 100))
+
+    # 15. Offline: il fronte deve BLOCCARSI, mai lasciar correre il timer all'infinito.
+    r = simulate_offline(24 * 3600, 20, {"kinetic": 8}, 3, 5, theta_r)
+    req(r["stall"] is not None,
+        "Dopo 24h offline il fronte si blocca invece di correre (ondata %d, causa: %s)"
+        % (r["wave_final"], r["stall"]))
+    # 15b. Il punto di stallo offline NON deve superare il tetto difensivo online:
+    #      altrimenti il giocatore rientra a un'ondata che non puo' vincere da sveglio.
+    online_cap = 0
+    for k in range(1, 200):
+        if wave_dps({"kinetic": 8}, 3, k, 5) >= hp_budget(k, theta_r) / engagement_window(k):
+            online_cap = k
+        else:
+            break
+    req(r["wave_final"] <= online_cap,
+        "Lo stallo offline non supera il tetto difensivo online (offline %d <= online %d)"
+        % (r["wave_final"], online_cap))
+
+    # 16. Offline: piu' difesa = piu' avanzamento. Deve essere monotono.
+    prev = -1
+    mono = True
+    for _name, tc, at, bl in LOADOUTS:
+        w = simulate_offline(8 * 3600, 20, tc, at, bl, theta_r)["waves_cleared"]
+        if w < prev:
+            mono = False
+        prev = w
+    req(mono, "Offline: uno schieramento migliore avanza sempre di piu' (monotonia)")
+
+    # 17. Respingere un'ondata deve restare profittevole per tutto l'arco MVP.
+    net50 = combat_data_reward(theta_r, 50) - ammo_vi_cost_per_wave({"kinetic": 8}, 1, 5, 50, theta_r)[0]
+    req(net50 > 0,
+        "Difendersi resta profittevole fino all'ondata 50 (netto %+.0f Dati)" % net50)
 
     print()
     if fails:
@@ -768,6 +969,7 @@ def main():
         t_threat_curve(theta)
         t_feedback_loop(theta)
         t_research(theta)
+        t_combat_reward(theta)
         t_offline(theta)
         t_perf()
     ok = check_invariants(verbose=True)
