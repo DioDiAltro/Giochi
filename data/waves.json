@@ -1,0 +1,64 @@
+{
+  "_comment": "Nemici e direttore delle ondate. Il budget HP di ogni ondata e' CALCOLATO, non scritto a mano: vedi tuning.json -> threat.",
+  "_version": 1,
+
+  "enemies": [
+    {
+      "id": "swarm", "name": "Drone Sciame",
+      "hp": 40, "speed_tiles_s": 1.80, "armor": 0, "air": false,
+      "damage_per_second": 8, "point_cost": 40,
+      "_role": "riempitivo: testa il throughput grezzo della difesa"
+    },
+    {
+      "id": "flyer", "name": "Ricognitore Volante",
+      "hp": 90, "speed_tiles_s": 2.60, "armor": 10, "air": true,
+      "damage_per_second": 12, "point_cost": 90,
+      "_role": "ignora muri e flow field, vola dritto al Core: obbliga a coprire l'aria e a non ammassare tutto su un lato"
+    },
+    {
+      "id": "armored", "name": "Cingolato Corazzato",
+      "hp": 400, "speed_tiles_s": 0.70, "armor": 60, "air": false,
+      "damage_per_second": 30, "point_cost": 400,
+      "_role": "l'armatura PIATTA rende quasi inutile la munizione di tier basso: e' il meccanismo che costringe a raffinare"
+    }
+  ],
+
+  "composition": [
+    { "from_wave": 1,  "mix": { "swarm": 1.00, "flyer": 0.00, "armored": 0.00 } },
+    { "from_wave": 5,  "mix": { "swarm": 0.80, "flyer": 0.20, "armored": 0.00 } },
+    { "from_wave": 13, "mix": { "swarm": 0.55, "flyer": 0.25, "armored": 0.20 } },
+    { "from_wave": 26, "mix": { "swarm": 0.40, "flyer": 0.25, "armored": 0.35 } }
+  ],
+
+  "director": {
+    "hp_budget_formula": "B0 * (1 + a*n)^p * (1 + theta/theta_ref)^q",
+    "spawn_batches": 4,
+    "spawn_batch_interval_s": 3.0,
+    "spawn_edges": ["N", "S", "E", "W"],
+    "spawn_edges_active_from_wave": { "1": 1, "8": 2, "20": 3, "34": 4 },
+    "_note": "Aggiungere un lato di spawn e' il modo migliore per alzare la difficolta' senza gonfiare gli HP: costringe a ri-progettare la base invece di aggiungere torrette allo stesso muro."
+  },
+
+  "reward": {
+    "formula": "data = kappa_combat_data * theta * wave_interval(n)",
+    "kappa": 0.20,
+    "quota_dati_totali": "16.7%",
+    "_note": "Respingere un'ondata da' Dati. Necessario perche' il timer avanza anche offline: senza ricompensa, l'avanzamento delle ondate sarebbe solo una punizione per essersi assentati. Il netto (Dati - VI munizioni) resta positivo fino all'ondata ~68."
+  },
+
+  "offline": {
+    "timer_advances": true,
+    "resolution": "ondata per ondata, con lo snapshot difensivo salvato all'uscita",
+    "threat_uses_online_theta": true,
+    "on_insufficient_defense": "STALLO — il fronte si blocca su quell'ondata, la base non viene mai distrutta",
+    "consumes_ammo": true
+  },
+
+  "milestones": {
+    "_comment": "Ondate in cui la curva DEVE mettere in crisi lo schieramento corrente (verificato da tools/balance_sim.py).",
+    "5":  "L1 (4 Cinetiche, munizione R1) smette di bastare -> il giocatore DEVE raffinare fino a R3",
+    "16": "L2 (munizione R3) smette di bastare -> servono piu' torrette + i primi livelli di Balistica",
+    "35": "L3 smette di bastare -> serve la Fonderia (R4) e la Torretta a Frammentazione",
+    "50": "fine dell'arco MVP: se il giocatore arriva qui, il prototipo ha dimostrato il suo loop"
+  }
+}

@@ -1,0 +1,154 @@
+{
+  "_comment": "Edifici. 'ports' definisce le facce di I/O in coordinate locali PRIMA della rotazione: [dx, dy, direzione, tipo]. La rotazione applica una matrice 90 gradi alle coordinate locali e alla direzione.",
+  "_version": 1,
+
+  "categories": ["logistica", "produzione", "energia", "difesa", "dati"],
+
+  "buildings": [
+    {
+      "id": "belt", "name": "Nastro Trasportatore", "category": "logistica",
+      "size": [1, 1], "cost": { "ingot_iron": 1 }, "kw": 0,
+      "throughput_items_s": 6.0, "slots_per_tile": 3,
+      "drag_build": true,
+      "_drag_build": "costruibile trascinando il dito: la rotta viene auto-instradata a L (Manhattan)"
+    },
+    {
+      "id": "belt_fast", "name": "Nastro ad Alta Portata", "category": "logistica",
+      "size": [1, 1], "cost": { "ingot_iron": 1, "ingot_copper": 1 }, "kw": 0,
+      "throughput_items_s": 9.0, "slots_per_tile": 3,
+      "drag_build": true, "unlocked_by": "log_belts_1"
+    },
+    {
+      "id": "splitter", "name": "Ripartitore", "category": "logistica",
+      "size": [1, 2], "cost": { "ingot_iron": 4 }, "kw": 0,
+      "mode": ["round_robin", "priorita", "filtro"],
+      "_note": "Il filtro e' impostabile con un tap sull'edificio -> bottom sheet. Nessun drag di precisione."
+    },
+    {
+      "id": "pipe", "name": "Condotto Fluidi", "category": "logistica",
+      "size": [1, 1], "cost": { "ingot_copper": 1 }, "kw": 0,
+      "capacity_mb": 600, "drag_build": true
+    },
+    {
+      "id": "storage", "name": "Silo", "category": "logistica",
+      "size": [2, 2], "cost": { "ingot_iron": 20 }, "kw": 0,
+      "capacity_items": 2000,
+      "_note": "Il cap dei silo e' cio' che limita l'accumulo offline: senza silo l'idle si satura subito."
+    },
+    {
+      "id": "power_pole", "name": "Palo Elettrico", "category": "energia",
+      "size": [1, 1], "cost": { "ingot_copper": 2 }, "kw": 0,
+      "connection_radius": 6, "drag_build": true
+    },
+
+    {
+      "id": "drill", "name": "Trivella", "category": "produzione",
+      "size": [2, 2], "cost": { "ingot_iron": 8 }, "kw": 6,
+      "recipes": ["drill_iron", "drill_copper"],
+      "must_be_on_patch": true,
+      "ports": [[1, 1, "out", "solid"]]
+    },
+    {
+      "id": "pump", "name": "Pompa Idrica", "category": "produzione",
+      "size": [1, 1], "cost": { "ingot_iron": 8, "ingot_copper": 4 }, "kw": 8,
+      "recipes": ["pump_water"], "must_be_on_patch": true,
+      "ports": [[0, 0, "out", "fluid"]], "unlocked_by": "proc_washing"
+    },
+    {
+      "id": "crusher", "name": "Trituratore", "category": "produzione",
+      "size": [2, 1], "cost": { "ingot_iron": 12 }, "kw": 12,
+      "recipes": ["crush_iron", "crush_copper"],
+      "ports": [[0, 0, "in", "solid"], [1, 0, "out", "solid"]]
+    },
+    {
+      "id": "washer", "name": "Purificatore", "category": "produzione",
+      "size": [2, 2], "cost": { "ingot_iron": 16, "ingot_copper": 6 }, "kw": 18,
+      "recipes": ["wash_iron", "wash_copper"],
+      "ports": [
+        [0, 0, "in", "solid"],
+        [0, 1, "in", "fluid"],
+        [1, 0, "out", "solid"],
+        [1, 1, "out", "solid"]
+      ],
+      "output_routing": "il sottoprodotto Fanghiglia esce dalla porta [1,1], il prodotto principale da [1,0]",
+      "unlocked_by": "proc_washing"
+    },
+    {
+      "id": "furnace", "name": "Fornace", "category": "produzione",
+      "size": [1, 2], "cost": { "ingot_iron": 10 }, "kw": 10,
+      "recipes": ["smelt_iron", "smelt_copper", "smelt_direct_iron", "smelt_direct_copper"],
+      "ports": [[0, 0, "in", "solid"], [0, 1, "out", "solid"]]
+    },
+    {
+      "id": "compactor", "name": "Compattatore", "category": "produzione",
+      "size": [1, 1], "cost": { "ingot_iron": 14 }, "kw": 14,
+      "recipes": ["compact_slag"],
+      "ports": [[0, 0, "in", "solid"], [0, 0, "out", "solid"]],
+      "unlocked_by": "pow_briquette"
+    },
+    {
+      "id": "induction_foundry", "name": "Fonderia a Induzione", "category": "produzione",
+      "size": [2, 2], "cost": { "ingot_iron": 40, "ingot_copper": 30 }, "kw": 90,
+      "recipes": ["alloy_conductive"], "multiblock": true,
+      "ports": [
+        [0, 0, "in", "solid"],
+        [1, 0, "in", "solid"],
+        [0, 1, "in", "fluid"],
+        [1, 1, "out", "solid"]
+      ],
+      "unlocked_by": "proc_alloy",
+      "_note": "Le 4 porte sono su 4 facce diverse e OGNI input deve essere alimentato separatamente. E' voluto: costringe a progettare uno smistamento, non a incollare un nastro."
+    },
+
+    {
+      "id": "starter_generator", "name": "Generatore d'Avvio", "category": "energia",
+      "size": [2, 2], "cost": {}, "kw": -120, "unique": true, "indestructible": true,
+      "_note": "Fornito all'inizio della partita, non ricostruibile. Da' al giocatore i 120 kW per partire senza dover gia' avere una catena di combustibile."
+    },
+    {
+      "id": "thermal_generator", "name": "Generatore Termico", "category": "energia",
+      "size": [2, 1], "cost": { "ingot_iron": 20, "ingot_copper": 8 }, "kw": -60,
+      "recipes": ["burn_briquette"],
+      "ports": [[0, 0, "in", "solid"]],
+      "unlocked_by": "pow_briquette"
+    },
+
+    {
+      "id": "core", "name": "Core / Server Centrale", "category": "dati",
+      "size": [3, 3], "cost": {}, "kw": 0, "unique": true,
+      "hp": 5000,
+      "_note": "Obiettivo dei nemici. Se cade -> game over di settore (non della partita: si ricomincia il settore mantenendo la Ricerca)."
+    },
+    {
+      "id": "server", "name": "Rack Server", "category": "dati",
+      "size": [1, 2], "cost": { "ingot_iron": 8, "ingot_copper": 12 }, "kw": 25,
+      "recipes": ["server_upload"],
+      "ports": [[0, 0, "in", "solid"]],
+      "must_be_linked_to_core": true, "link_radius": 12,
+      "_note": "Consuma qualsiasi solido e lo converte in Dati proporzionalmente al suo VI. E' il ponte fra industria e progressione incrementale."
+    },
+
+    {
+      "id": "wall", "name": "Muro Corazzato", "category": "difesa",
+      "size": [1, 1], "cost": { "ingot_iron": 2 }, "kw": 0,
+      "hp": 250, "drag_build": true,
+      "_note": "Non blocca il pathfinding: lo RENDE PIU' COSTOSO. Il flow field usa il costo di demolizione come peso, cosi' i nemici scelgono la via meno difesa (comportamento Mindustry)."
+    },
+    {
+      "id": "turret_kinetic", "name": "Torretta Cinetica", "category": "difesa",
+      "size": [2, 2], "cost": { "ingot_iron": 15 }, "kw": 15,
+      "hp": 400,
+      "damage_per_shot": 12.5, "shots_per_second": 2.0, "ammo_per_shot": 0.25,
+      "range_tiles": 8, "targets_air": true, "ammo_buffer": 30,
+      "_ammo": "accetta QUALSIASI solido con valid_ammo=true; il danno viene moltiplicato per (R+1)^1.585"
+    },
+    {
+      "id": "turret_frag", "name": "Torretta a Frammentazione", "category": "difesa",
+      "size": [2, 2], "cost": { "ingot_iron": 25, "ingot_copper": 10 }, "kw": 25,
+      "hp": 450,
+      "damage_per_shot": 22.0, "shots_per_second": 1.0, "ammo_per_shot": 0.50,
+      "range_tiles": 6, "targets_air": false, "aoe_max_targets": 5, "ammo_buffer": 20,
+      "unlocked_by": "def_turret_frag"
+    }
+  ]
+}

@@ -1,0 +1,53 @@
+; Engine configuration file.
+; Factory-Defense Incrementale a Nodi — Sprint 0
+;
+; NOTA: la radice del progetto Godot coincide con la radice del repo, cosi'
+; res://data/ e' esattamente la cartella data/ versionata. Un solo posto per i
+; numeri di bilanciamento, nessuna copia da tenere sincronizzata.
+
+config_version=5
+
+[application]
+
+config/name="Factory Defense"
+config/description="Factory-Defense Incrementale a Nodi"
+run/main_scene="res://main.tscn"
+config/features=PackedStringArray("4.4", "Mobile")
+config/icon="res://icon.svg"
+
+[autoload]
+
+; L'ORDINE CONTA: Database deve essere pronto prima che SimCore costruisca il mondo.
+Database="*res://autoload/database.gd"
+EventBus="*res://autoload/event_bus.gd"
+SimCore="*res://autoload/sim_core.gd"
+
+[debug]
+
+gdscript/warnings/untyped_declaration=1
+
+[display]
+
+window/size/viewport_width=1080
+window/size/viewport_height=1920
+window/handheld/orientation=1
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[input_devices]
+
+; Permette di usare il mouse come dito durante lo sviluppo su desktop:
+; lo stesso codice di InputEventScreenTouch/Drag funziona su entrambi.
+pointing/emulate_touch_from_mouse=true
+
+[physics]
+
+common/physics_ticks_per_second=60
+2d/run_on_separate_thread=false
+
+[rendering]
+
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+textures/vram_compression/import_etc2_astc=true
+anti_aliasing/quality/msaa_2d=0

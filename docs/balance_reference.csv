@@ -1,0 +1,159 @@
+# FOGLIO DI BILANCIAMENTO — generato da tools/balance_sim.py. NON modificare a mano.
+
+=== MATERIALI ===
+id,nome,tier_R,base_value,VI,munizione_valida,danno_x,danno_per_VI
+ore_iron,Minerale di Ferro Grezzo,0,1.00,1.0000,si,1.0000,1.0000
+ore_copper,Minerale di Rame Grezzo,0,1.20,1.2000,si,1.0000,0.8333
+dust_iron,Polvere di Ferro,1,1.00,2.5000,si,3.0001,1.2000
+dust_copper,Polvere di Rame,1,1.20,3.0000,si,3.0001,1.0000
+pdust_iron,Polvere di Ferro Purificata,2,1.00,6.2500,si,5.7048,0.9128
+pdust_copper,Polvere di Rame Purificata,2,1.20,7.5000,si,5.7048,0.7606
+ingot_iron,Lingotto di Ferro,3,1.00,15.6250,si,9.0005,0.5760
+ingot_copper,Lingotto di Rame,3,1.20,18.7500,si,9.0005,0.4800
+alloy_cond,Lingotto di Lega Conduttiva,4,1.50,58.5938,si,12.8194,0.2188
+slag,Fanghiglia (sottoprodotto),1,0.35,0.8750,NO,-,-
+briquette,Bricchetta di Scoria (combustibile),2,0.35,2.1875,NO,-,-
+
+=== RICETTE ===
+id,macchina,input,output,ciclo_s,kW,output_per_s
+drill_iron,Trivella,-,ore_ironx1,2.00,6,0.5000
+drill_copper,Trivella,-,ore_copperx1,2.00,6,0.5000
+pump_water,Pompa Idrica,-,water_mbx240,2.00,8,120.0000
+crush_iron,Trituratore,ore_ironx1,dust_ironx2,2.00,12,1.0000
+crush_copper,Trituratore,ore_copperx1,dust_copperx2,2.00,12,1.0000
+wash_iron,Purificatore,dust_ironx2; water_mbx120,pdust_ironx2; slagx1,2.00,18,1.0000
+wash_copper,Purificatore,dust_copperx2; water_mbx120,pdust_copperx2; slagx1,2.00,18,1.0000
+smelt_iron,Fornace,pdust_ironx1,ingot_ironx1,3.00,10,0.3333
+smelt_copper,Fornace,pdust_copperx1,ingot_copperx1,3.00,10,0.3333
+smelt_direct_iron,Fornace,ore_ironx1,ingot_ironx1,4.50,10,0.2222
+smelt_direct_copper,Fornace,ore_copperx1,ingot_copperx1,4.50,10,0.2222
+compact_slag,Compattatore,slagx2,briquettex1,2.00,14,0.5000
+burn_briquette,Generatore Termico,briquettex1,kW_sx300,5.00,0,60.0000
+alloy_conductive,Fonderia a Induzione (2x2),ingot_copperx2; ingot_ironx1; water_mbx200,alloy_condx1,6.00,90,0.1667
+server_upload,Server,<qualsiasi solido>x2.0,Datix2.0 * VI * eta,1.00,25,
+
+=== BASE DI RIFERIMENTO ===
+edificio,quantita,kW_cad,kW_tot
+Trivella (ferro),4,6,24
+Trituratore,4,12,48
+Purificatore,4,18,72
+Pompa Idrica,2,8,16
+Fornace,12,10,120
+Compattatore,2,14,28
+Generatore Termico,5,0,0
+Server,2,25,50
+Torretta Cinetica,4,15,60
+DOMANDA TOTALE,,,418
+OFFERTA TOTALE,,,420
+
+=== CURVA ONDATE (Theta = 62.5) ===
+ondata,HP_budget,finestra_s,DPS_richiesto,intervallo_s,L1,L2,L3,L4,L5
+1,634,11.11,57,118,165,495,1287,3249,8935
+2,820,11.11,74,117,165,495,1287,3249,8935
+3,1022,11.11,92,116,165,495,1287,3249,8935
+4,1240,11.11,112,114,165,495,1287,3249,8935
+5,1472,10.20,144,112,156,486,1269,3033,8353
+6,1718,10.20,168,111,156,486,1269,3033,8353
+7,1977,10.20,194,110,156,486,1269,3033,8353
+8,2248,10.20,220,108,156,486,1269,3033,8353
+9,2532,10.20,248,106,156,486,1269,3033,8353
+10,2828,10.20,277,105,156,486,1269,3033,8353
+11,3135,10.20,307,104,156,486,1269,3033,8353
+12,3453,10.20,338,102,156,486,1269,3033,8353
+13,3781,11.24,337,100,126,431,1159,2847,7944
+14,4121,11.24,367,99,126,431,1159,2847,7944
+15,4470,11.24,398,98,126,431,1159,2847,7944
+16,4829,11.24,430,96,126,431,1159,2847,7944
+17,5199,11.24,463,94,126,431,1159,2847,7944
+18,5577,11.24,496,93,126,431,1159,2847,7944
+19,5965,11.24,531,92,126,431,1159,2847,7944
+20,6363,11.24,566,90,126,431,1159,2847,7944
+21,6769,11.24,602,88,126,431,1159,2847,7944
+22,7184,11.24,639,87,126,431,1159,2847,7944
+23,7608,11.24,677,86,126,431,1159,2847,7944
+24,8040,11.24,716,84,126,431,1159,2847,7944
+25,8481,11.24,755,82,126,431,1159,2847,7944
+26,8930,12.38,721,81,105,392,1080,2748,7746
+27,9387,12.38,758,80,105,392,1080,2748,7746
+28,9852,12.38,796,78,105,392,1080,2748,7746
+29,10326,12.38,834,76,105,392,1080,2748,7746
+30,10807,12.38,873,75,105,392,1080,2748,7746
+31,11295,12.38,912,74,105,392,1080,2748,7746
+32,11792,12.38,952,72,105,392,1080,2748,7746
+33,12296,12.38,993,70,105,392,1080,2748,7746
+34,12807,12.38,1034,69,105,392,1080,2748,7746
+35,13326,12.38,1076,68,105,392,1080,2748,7746
+36,13851,12.38,1119,66,105,392,1080,2748,7746
+37,14385,12.38,1162,64,105,392,1080,2748,7746
+38,14925,12.38,1205,63,105,392,1080,2748,7746
+39,15472,12.38,1249,62,105,392,1080,2748,7746
+40,16026,12.38,1294,60,105,392,1080,2748,7746
+41,16587,12.38,1339,58,105,392,1080,2748,7746
+42,17155,12.38,1385,57,105,392,1080,2748,7746
+43,17730,12.38,1432,56,105,392,1080,2748,7746
+44,18311,12.38,1479,54,105,392,1080,2748,7746
+45,18899,12.38,1526,52,105,392,1080,2748,7746
+46,19494,12.38,1574,51,105,392,1080,2748,7746
+47,20095,12.38,1623,50,105,392,1080,2748,7746
+48,20702,12.38,1672,48,105,392,1080,2748,7746
+49,21316,12.38,1721,46,105,392,1080,2748,7746
+50,21936,12.38,1771,45,105,392,1080,2748,7746
+51,22563,12.38,1822,45,105,392,1080,2748,7746
+52,23195,12.38,1873,45,105,392,1080,2748,7746
+53,23834,12.38,1925,45,105,392,1080,2748,7746
+54,24479,12.38,1977,45,105,392,1080,2748,7746
+55,25130,12.38,2029,45,105,392,1080,2748,7746
+56,25788,12.38,2082,45,105,392,1080,2748,7746
+57,26451,12.38,2136,45,105,392,1080,2748,7746
+58,27120,12.38,2190,45,105,392,1080,2748,7746
+59,27795,12.38,2244,45,105,392,1080,2748,7746
+60,28476,12.38,2299,45,105,392,1080,2748,7746
+
+=== ALBERO DI RICERCA ===
+#,id,nome,costo,prereq,effetto
+1,log_belts_1,Nastri Rinforzati,120,,Nastri 6 -> 9 slot/s (+50%)
+2,mine_drills_1,Punte al Tungsteno,150,,Trivelle +25% velocita'
+3,proc_washing,Purificazione a Umido,400,mine_drills_1,Sblocca Purificatore + Pompa Idrica
+4,pow_briquette,Recupero Scorie,550,proc_washing,Sblocca Compattatore + Generatore Termico
+5,def_ballistics,Calibratura Balistica,300,,"+6%/liv danno torrette (10 liv, x1.35)"
+6,data_servers_1,Bus Dati Parallelo,900,proc_washing,Server 2.0 -> 2.6 item/s
+7,proc_alloy,Metallurgia Induttiva,2400,pow_briquette|data_servers_1,Sblocca Fonderia a Induzione 2x2
+8,def_turret_frag,Testate a Frammentazione,1800,def_ballistics,Sblocca Torretta a Frammentazione
+9,idle_uplink_1,Uplink Autonomo,3000,data_servers_1,"Offline 40%->55%, cap 8h->12h"
+10,pow_efficiency,Isolamento Criogenico,3500,pow_briquette,-20% consumo energetico
+11,act_overclock,Protocollo Overclock,5000,proc_alloy,Abilita' Overclock x2.5 / 45s / CD 10min
+12,data_compress,Compressione Entropica,9000,idle_uplink_1|proc_alloy,Dati per VI x1.5
+
+=== CALIBRATURA BALISTICA (ripetibile) ===
+livello,costo_livello,costo_cumulato,bonus_danno
+0,300,0,0%
+1,405,300,6%
+2,547,705,12%
+3,738,1252,18%
+4,996,1990,24%
+5,1345,2986,30%
+6,1816,4332,36%
+7,2452,6148,42%
+8,3310,8599,48%
+9,4468,11909,54%
+10,6032,16377,60%
+11,8143,22409,66%
+12,10993,30552,72%
+13,14841,41545,78%
+14,20035,56386,84%
+15,27048,76422,90%
+16,36514,103469,96%
+17,49294,139983,102%
+18,66547,189277,108%
+19,89839,255825,114%
+20,121282,345663,120%
+21,163731,466945,126%
+22,221037,630676,132%
+23,298399,851713,138%
+24,402839,1150112,144%
+25,543833,1552951,150%
+26,734174,2096784,156%
+27,991135,2830958,162%
+28,1338033,3822094,168%
+29,1806344,5160127,174%
+30,2438565,6966471,180%

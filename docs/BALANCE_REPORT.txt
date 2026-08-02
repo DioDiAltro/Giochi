@@ -1,0 +1,328 @@
+##############################################################################
+#  FACTORY-DEFENSE INCREMENTALE A NODI — REPORT DI BILANCIAMENTO
+#  generato da tools/balance_sim.py
+##############################################################################
+
+==============================================================================
+ TABELLA 1 — MATERIALI E VALORE INDUSTRIALE (VI = base * 2.5^R)
+==============================================================================
+ID            Nome                                   R   base        VI
+------------------------------------------------------------------------------
+ore_iron      Minerale di Ferro Grezzo               0   1.00     1.000
+ore_copper    Minerale di Rame Grezzo                0   1.20     1.200
+dust_iron     Polvere di Ferro                       1   1.00     2.500
+dust_copper   Polvere di Rame                        1   1.20     3.000
+pdust_iron    Polvere di Ferro Purificata            2   1.00     6.250
+pdust_copper  Polvere di Rame Purificata             2   1.20     7.500
+ingot_iron    Lingotto di Ferro                      3   1.00    15.625
+ingot_copper  Lingotto di Rame                       3   1.20    18.750
+alloy_cond    Lingotto di Lega Conduttiva            4   1.50    58.594
+slag          Fanghiglia (sottoprodotto)             1   0.35     0.875
+briquette     Bricchetta di Scoria (combustibile)    2   0.35     2.188
+
+==============================================================================
+ TABELLA 2 — CATENA COMPLETA vs SCORCIATOIA (per 1 Minerale Grezzo)
+==============================================================================
+  Catena lunga  (Trivella->Trituratore->Purificatore->Fornace)
+     resa : 2.0 Lingotti + 1.0 Fanghiglia
+     VI   : 32.125
+     costo: 4 tipi di macchina, acqua, 46 kW per linea
+  Scorciatoia   (Trivella->Fornace diretta)
+     resa : 1.0 Lingotti
+     VI   : 15.625
+     costo: 2 tipi di macchina, niente acqua, 16 kW per linea
+  --> GUADAGNO DELLA CATENA LUNGA: x2.06 in VI per minerale
+
+  Conferire il MINERALE GREZZO al Core          :     1.00 VI
+  Conferire il LINGOTTO da catena lunga (x2)    :    32.12 VI
+  --> MOLTIPLICATORE DI RAFFINAZIONE            : x32.1
+
+==============================================================================
+ TABELLA 3 — RAPPORTI DI MACCHINA (linea ferro, catena completa)
+==============================================================================
+  Trivella      : produce  0.500 minerale/s
+  Trituratore   : consuma  0.500 minerale/s -> produce 1.000 polvere/s
+  Purificatore  : consuma  1.000 polvere/s   -> produce 1.000 polvere pura/s  (+0.50 fanghiglia/s, 60 mB acqua/s)
+  Fornace       : consuma  0.333 pol.pura/s -> produce 0.333 lingotti/s
+  Pompa Idrica  : produce  120 mB acqua/s
+
+  RAPPORTO DI LINEA per 4 trivelle:
+     4 Trivella : 4 Trituratore : 4 Purificatore : 12 Fornace : 2 Pompa
+     ratio normalizzato  ->  1 : 1 : 1 : 3 : 0.5
+  Output finale: 4.00 lingotti/s
+
+==============================================================================
+ TABELLA 4 — CICLO CHIUSO SCORIE -> ENERGIA
+==============================================================================
+  4 Purificatori producono  : 2.00 fanghiglia/s
+  Servono                  : 2 Compattatori  -> 1.00 bricchette/s
+  1 Generatore Termico brucia 0.20 bricchette/s per 60 kW
+  Bricchette sostenibili   : 5 generatori = 300 kW
+  --> il ciclo si CHIUDE: nessuna fanghiglia viene sprecata, nessun
+      combustibile viene importato dall'esterno della fabbrica.
+
+==============================================================================
+ TABELLA 5 — BILANCIO ENERGETICO DELLA BASE DI RIFERIMENTO
+==============================================================================
+Edificio                     n   kW cad    kW tot
+------------------------------------------------------------------------------
+Trivella (ferro)             4        6        24
+Trituratore                  4       12        48
+Purificatore                 4       18        72
+Pompa Idrica                 2        8        16
+Fornace                     12       10       120
+Compattatore                 2       14        28
+Generatore Termico           5        0         0
+Server                       2       25        50
+Torretta Cinetica            4       15        60
+------------------------------------------------------------------------------
+DOMANDA TOTALE                                418 kW
+Generatore d Avvio           1      120       120
+Generatore Termico           5       60       300
+OFFERTA TOTALE                                420 kW
+
+  Soddisfazione di rete  sigma = min(1, offerta/domanda) = 1.000
+  --> tutte le macchine girano al 100.0% della velocita' nominale
+  Bricchette richieste: 1.00/s  |  prodotte: 1.00/s  |  margine: +0.00/s
+
+==============================================================================
+ TABELLA 6 — GENERAZIONE DATI (motore incrementale)
+==============================================================================
+  Formula:  D_dot = eta_server * SOMMA_i( rate_i [item/s] * VI_i )
+  Cap per Server: 2.0 item/s
+
+Scenario                                          item/s      VI/s    Dati/s
+------------------------------------------------------------------------------
+Minerale grezzo al Core (nessuna raffinazione)      2.00      2.00      2.00
+Polvere R1 al Core                                  4.00     10.00     10.00
+Polvere pura R2 al Core                             4.00     25.00     25.00
+Lingotti R3 al Core (base di riferimento)           4.00     62.50     62.50
+Lega Conduttiva R4 al Core                          0.67     39.08     39.08
+
+  --> La base di riferimento genera Theta = 62.50 VI/s = 62.50 Dati/s
+  --> contro i 2.00 Dati/s del minerale grezzo: x31.2
+
+==============================================================================
+ TABELLA 7 — EFFICIENZA MUNIZIONI: DANNO PER VI SPESO
+==============================================================================
+  La decisione centrale del gioco: lo stesso materiale puo' andare
+  al Core (Dati) o in torretta (sopravvivenza). Chi vince?
+
+ TierEsempio                                VI  Molt. danno   Danno/VI  vs corazzato
+------------------------------------------------------------------------------------
+    0  Minerale di Ferro Grezzo           1.00         1.00      1.000         1.875
+    1  Polvere di Ferro                   2.50         3.00      1.200         2.250
+    2  Polvere di Ferro Purificata        6.25         5.70      0.913         1.810
+    3  Lingotto di Ferro                 15.62         9.00      0.576         3.360
+    4  Lingotto di Lega Conduttiva       58.59        12.82      0.219         1.711
+
+  LETTURA: contro nemici SENZA armatura il tier basso (R1) e' il piu'
+  efficiente per VI speso -> conviene sparare polvere e mandare i
+  lingotti al Core. Contro i CORAZZATI l'armatura piatta ribalta la
+  classifica -> serve munizione alto tier. E' la tensione voluta.
+
+==============================================================================
+ TABELLA 8 — CURVA MINACCIA vs CAPACITA' DIFENSIVA
+==============================================================================
+  HP_ondata(n) = 150 * (1+0.22n)^1.55 * (1+Theta/20)^0.80
+  Theta base di riferimento = 62.5 VI/s
+  Finestra di ingaggio: 20 celle di corridoio coperto
+
+  DPS EFFICACE DEGLI SCHIERAMENTI (pesato sulla composizione ondata):
+    Schieramento                                     ond.10   ond.20   ond.40   mun/s
+----------------------------------------------------------------------------------------
+    L1  4 Cinetiche  / mun. R1 / balistica  0           156      126      105    0.80
+    L2  4 Cinetiche  / mun. R3 / balistica  0           486      431      392    0.80
+    L3  8 Cinetiche  / mun. R3 / balistica  5          1269     1159     1080    1.60
+    L4  8 Cin + 4 Frag / mun. R4 / balistica 10        3033     2847     2748    2.40
+    L5 16 Cin + 8 Frag / mun. R4 / balistica 20        8353     7944     7746    4.80
+
+  --- Theta = 62.5 VI/s (base di riferimento) ---
+ Ondata   HP budget  Finestra  DPS rich.   Schieramenti sufficienti
+----------------------------------------------------------------------------------------
+      1         634     11.1s         57   L1, L2, L3, L4, L5
+      5        1472     10.2s        144   L1, L2, L3, L4, L5
+     10        2828     10.2s        277   L2, L3, L4, L5
+     15        4470     11.2s        398   L2, L3, L4, L5
+     20        6363     11.2s        566   L3, L4, L5
+     25        8481     11.2s        755   L3, L4, L5
+     30       10807     12.4s        873   L3, L4, L5
+     40       16026     12.4s       1294   L4, L5
+     50       21936     12.4s       1771   L4, L5
+
+  --- Theta = 312.5 VI/s (base ampliata x5) ---
+ Ondata   HP budget  Finestra  DPS rich.   Schieramenti sufficienti
+----------------------------------------------------------------------------------------
+      1        1934     11.1s        174   L2, L3, L4, L5
+      5        4489     10.2s        440   L2, L3, L4, L5
+     10        8623     10.2s        845   L3, L4, L5
+     15       13633     11.2s       1213   L4, L5
+     20       19405     11.2s       1727   L4, L5
+     25       25865     11.2s       2302   L4, L5
+     30       32958     12.4s       2661   L4, L5
+     40       48877     12.4s       3947   L5
+     50       66901     12.4s       5402   L5
+
+  ONDATA MASSIMA SOSTENIBILE (Theta base):
+     L1  4 Cinetiche  / mun. R1 / balistica  0      -> ondata 5
+     L2  4 Cinetiche  / mun. R3 / balistica  0      -> ondata 16
+     L3  8 Cinetiche  / mun. R3 / balistica  5      -> ondata 35
+     L4  8 Cin + 4 Frag / mun. R4 / balistica 10    -> ondata 67
+     L5 16 Cin + 8 Frag / mun. R4 / balistica 20    -> ondata 120
+
+==============================================================================
+ TABELLA 9 — IL LOOP DI RETROAZIONE NEGATIVA (auto-stabilizzazione)
+==============================================================================
+  La minaccia e' ancorata a cio' che ARRIVA AL CORE, non a cio' che
+  produci. Bruciare materiale in torretta abbassa quindi Theta e
+  automaticamente le ondate future. Il sistema non puo' divergere.
+
+  Schieramento: 4 Torrette Cinetiche, duty cycle 40%
+  Consumo munizioni: 0.80 item/s
+Munizione               VI sottratto/s   Theta residuo   HP ond.20    delta
+------------------------------------------------------------------------------
+Polvere di Ferro                  2.00           60.50        6239    -1.9%
+Polvere di Ferro Purificata            5.00           57.50        6052    -4.9%
+Lingotto di Ferro                12.50           50.00        5579   -12.3%
+
+  (riferimento senza consumo: Theta=62.50, HP ondata 20 = 6363)
+
+==============================================================================
+ TABELLA 10 — ALBERO DI RICERCA MVP (12 nodi) E TEMPI DI SBLOCCO
+==============================================================================
+  Tempo stimato assumendo produzione crescente in 3 fasi:
+    fase A (pre-lavaggio)  ~  5 Dati/s
+    fase B (post-lavaggio) ~ 25 Dati/s
+    fase C (base rif.)     ~ 62 Dati/s
+
+  # Nodo                           Costo  Prereq                               ~tempo
+------------------------------------------------------------------------------------------
+  1 Nastri Rinforzati                120  -                                       24s
+  2 Punte al Tungsteno               150  -                                       30s
+  3 Purificazione a Umido            400  mine_drills_1                           80s
+  4 Recupero Scorie                  550  proc_washing                            22s
+  5 Calibratura Balistica            300  -                                       12s
+  6 Bus Dati Parallelo               900  proc_washing                            36s
+  7 Metallurgia Induttiva           2400  pow_briquette,data_servers_1            96s
+  8 Testate a Frammentazione        1800  def_ballistics                          29s
+  9 Uplink Autonomo                 3000  data_servers_1                          48s
+ 10 Isolamento Criogenico           3500  pow_briquette                           56s
+ 11 Protocollo Overclock            5000  proc_alloy                              80s
+ 12 Compressione Entropica          9000  idle_uplink_1,proc_alloy             2.4min
+
+  Costo totale albero MVP: 27120 Dati
+  Upgrade ripetibile 'Calibratura Balistica': C(L) = 300 * 1.35^L
+     livello  0:          300 Dati   (+0% danno)   cumulato              0
+     livello  5:        1,345 Dati   (+30% danno)   cumulato          2,986
+     livello 10:        6,032 Dati   (+60% danno)   cumulato         16,377
+     livello 20:      121,282 Dati   (+120% danno)   cumulato        345,663
+     livello 30:    2,438,565 Dati   (+180% danno)   cumulato      6,966,471
+
+==============================================================================
+ TABELLA 11 — RICOMPENSA DA COMBATTIMENTO (Dati per ondata respinta)
+==============================================================================
+  D_ondata = kappa * Theta * intervallo(n),  kappa = 0.20
+  Definita come FRAZIONE dell'industria, non come funzione degli HP:
+  cosi' il combattimento vale sempre il 16.7%% del totale, a ogni scala,
+  e non puo' MAI diventare il motore trainante al posto della logistica.
+
+ Ondata  interv.   D industria   D combatt.   quota  mun. VI (R1)       netto
+----------------------------------------------------------------------------------
+      5     112s         7,031        1,406   16.7%            19      +1,387
+     10     105s         6,562        1,312   16.7%            36      +1,276
+     20      90s         5,625        1,125   16.7%            82      +1,043
+     30      75s         4,688          938   16.7%           139        +799
+     40      60s         3,750          750   16.7%           205        +545
+     50      45s         2,812          562   16.7%           281        +281
+     60      45s         2,812          562   16.7%           365        +197
+     70      45s         2,812          562   16.7%           456        +106
+
+  'netto' = Dati guadagnati meno il VI di munizioni bruciato.
+  Resta positivo per tutto l'arco MVP e diventa un costo reale oltre
+  l'ondata ~68: nel late game difendersi PESA, ed e' voluto.
+
+==============================================================================
+ TABELLA 12 — PROGRESSIONE OFFLINE (timer ondate ATTIVO)
+==============================================================================
+  Regole:
+    - il timer ondate AVANZA a gioco chiuso e le ondate vengono risolte
+    - la base resta INVULNERABILE: se la difesa non basta il fronte si
+      BLOCCA su quell'ondata (la linea tiene ma non avanza)
+    - le munizioni VENGONO consumate: difendersi offline costa davvero
+    - la produzione gira a eta_offline, con tetto orario
+
+  Assenza  ondate  ondata      stallo          Dati    mun. VI
+--------------------------------------------------------------------
+    0.25h      10      30           -        24,254      2,334
+    0.50h      15      35         dps        46,873      3,977
+    1.00h      15      35         dps        91,873      3,977
+    2.00h      15      35         dps       181,873      3,977
+    4.00h      15      35         dps       361,873      3,977
+    8.00h      15      35         dps       721,873      3,977
+   12.00h      15      35         dps       721,873      3,977
+   24.00h      15      35         dps       721,873      3,977
+
+  Scenario: rientro dall'ondata 20 con 8 Cinetiche, munizione R3, balistica 5
+  (schieramento L3, che regge fino all'ondata 35).
+  --> il fronte si blocca da solo al limite naturale della difesa.
+      Non puoi rientrare e trovarti all'ondata 300.
+
+  CONFRONTO SCHIERAMENTI (8 h di assenza, partendo dall'ondata 20):
+    Schieramento                                    ondate  arriva a      stallo
+----------------------------------------------------------------------------------
+    L1  4 Cinetiche  / mun. R1 / balistica  0            0        20         dps
+    L2  4 Cinetiche  / mun. R3 / balistica  0            0        20         dps
+    L3  8 Cinetiche  / mun. R3 / balistica  5           15        35         dps
+    L4  8 Cin + 4 Frag / mun. R4 / balistica 10         47        67         dps
+    L5 16 Cin + 8 Frag / mun. R4 / balistica 20        116       136         dps
+
+  --> la progressione idle delle ondate e' LIMITATA DALLA DIFESA.
+      Costruire torrette sblocca avanzamento offline: e' il collegamento
+      che mancava fra il terzo genere (difesa) e lo strato incrementale.
+
+  DATI TOTALI ACCUMULATI (industria + combattimento - munizioni):
+  Assenza     eta=0.40 cap 8h    eta=0.55 cap 12h
+--------------------------------------------------
+     0.5h              46,873              65,942
+     2.0h             181,873             251,567
+     8.0h             721,873             994,067
+    12.0h             721,873           1,489,067
+    24.0h             721,873           1,489,067
+
+==============================================================================
+ TABELLA 13 — BUDGET PRESTAZIONALE MOBILE (target: 60 fps su A12 / Snapdragon 730)
+==============================================================================
+Voce                        Budget          Nota
+------------------------------------------------------------------------------
+Tick logico                 20 Hz           5.0 ms/tick max = 10% CPU
+Edifici simulati            <= 2 000        aggiornati solo se 'attivi' (dirty set)
+Item su nastro              <= 6 000        NON sono nodi: array compressi per corsia
+Draw call item              1               MultiMeshInstance2D unico
+Nemici simultanei           <= 250          MultiMesh + flow field, 0 pathfinding per-nemico
+Ricalcolo flow field        <= 1 / 500 ms   debounced, su thread separato
+Risoluzione grafo produz.   1 / 2 s         ordinamento topologico incrementale
+Save                        1 / 30 s        binario, su thread, < 8 ms
+
+==============================================================================
+ INVARIANTI DI DESIGN
+==============================================================================
+  [OK]   La catena lunga rende almeno 1.8x la scorciatoia (attuale: 2.06x)
+  [OK]   Raffinare batte il minerale grezzo di >=20x (attuale: 32.1x)
+  [OK]   Esponente industriale della minaccia < 1 -> espandere conviene (0.80)
+  [OK]   Almeno un tier alto va in deficit difensivo -> obbliga a espandere (R4: 0.68)
+  [OK]   I Dati superano la minaccia salendo di tier (R4: x2.08 di vantaggio)
+  [OK]   Il ciclo scorie->energia si autoalimenta (1.00 prodotte vs 1.00 richieste bricchette/s)
+  [OK]   Il ciclo scorie non produce surplus sprecato (margine 0.000 bricchette/s)
+  [OK]   Offerta energetica >= domanda nella base di riferimento (420 >= 418 kW)
+  [OK]   Margine energetico <= 30% -> l'energia resta un problema da ingegnerizzare (0%)
+  [OK]   Munizione R1 piu' efficiente per VI di R3 contro bersagli nudi (1.200 > 0.576)
+  [OK]   Contro i corazzati la classifica si ribalta (R3 3.360 > R1 2.250)
+  [OK]   Primo nodo di ricerca raggiungibile in <=60s (24s)
+  [OK]   I rapporti di linea sono numeri interi (Fornaci = 12.0000)
+  [OK]   I Dati da combattimento restano <=25% del totale a ogni ondata (max 16.7%)
+  [OK]   Dopo 24h offline il fronte si blocca invece di correre (ondata 35, causa: dps)
+  [OK]   Lo stallo offline non supera il tetto difensivo online (offline 35 <= online 35)
+  [OK]   Offline: uno schieramento migliore avanza sempre di piu' (monotonia)
+  [OK]   Difendersi resta profittevole fino all'ondata 50 (netto +281 Dati)
+
+  Tutte le invarianti di design sono soddisfatte.
